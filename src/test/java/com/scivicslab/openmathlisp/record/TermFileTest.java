@@ -28,7 +28,7 @@ class TermFileTest {
     @Test
     void idPrefix_bookPageDirectoryLayout_bookAndPages() {
         Path markdown = Path.of("/x/Books/SlaterVol1/理論物理学入門 上_p051-060/理論物理学入門 上_p051-060.md");
-        assertEquals("SlaterVol1-p051060", MarkdownEquations.idPrefix(markdown));
+        assertEquals("SlaterVol1-p051-060", MarkdownEquations.idPrefix(markdown));
         assertEquals("notes-chapter2", MarkdownEquations.idPrefix(Path.of("/x/notes/chapter2.md")));
     }
 

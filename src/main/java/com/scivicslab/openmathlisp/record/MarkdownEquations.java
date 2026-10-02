@@ -47,10 +47,11 @@ public final class MarkdownEquations {
             book = "doc";
         }
         Matcher pages = PAGES.matcher(stem);
-        String pagePart = pages.find() ? pages.group(1) : stem;
-        return sanitize(book) + "-" + sanitize(pagePart);
+        String pagePart = pages.find() ? pages.group(1) : sanitize(stem);
+        return sanitize(book) + "-" + pagePart;
     }
 
+    /** Keeps letters and digits only; the page range {@code p051-060} is matched before sanitizing and keeps its hyphen. */
     private static String sanitize(String text) {
         return text.replaceAll("[^A-Za-z0-9]+", "");
     }
