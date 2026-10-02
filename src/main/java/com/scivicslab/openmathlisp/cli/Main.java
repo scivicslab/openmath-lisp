@@ -17,7 +17,7 @@ import java.util.logging.Logger;
 
 /**
  * Entry point of the {@code openmath-lisp} command line tool.
- * Usage: {@code openmath-lisp <read|check|project|report> [options] <files...>}.
+ * Usage: {@code openmath-lisp <convert|check|report|render|project> [options] <files...>}.
  */
 public final class Main {
 
@@ -35,31 +35,38 @@ public final class Main {
         Toolchain toolchain = new Toolchain();
         Commands implementation = new Commands(toolchain, System.out);
 
-        commands.addCommand("Equations", "read", new Options(),
-                "Read the $$ blocks of markdown files into term files (X.md -> X.lisp)",
-                (CommandLine cl) -> run(() -> implementation.read(paths(cl))));
-        commands.addCommand("Equations", "check", new Options(),
-                "Run the structural, numeric (Maxima) and SMT (Z3) checks on term files",
+        commands.addCommand("Formulas", "convert", new Options(),
+                "Replace the LaTeX of markdown files with om blocks and om spans where it can be read",
+                (CommandLine cl) -> run(() -> implementation.convert(paths(cl))));
+        commands.addCommand("Formulas", "check", new Options(),
+                "Run the structural, numeric (Maxima) and SMT (Z3) checks; write X.lisp beside X.md",
                 (CommandLine cl) -> run(() -> implementation.check(paths(cl))));
+        commands.addCommand("Formulas", "report", new Options(),
+                "Print the count per status, the unreadable markers and the suspect formulas",
+                (CommandLine cl) -> run(() -> implementation.report(paths(cl))));
+        Options renderOptions = new Options();
+        renderOptions.addOption(Option.builder("o").longOpt("output").hasArg().argName("dir")
+                .desc("write the rendered files into this directory instead of printing").build());
+        commands.addCommand("Display", "render", renderOptions,
+                "Print markdown with every om block and om span replaced by LaTeX",
+                (CommandLine cl) -> run(() -> implementation.render(paths(cl),
+                        cl.getOptionValue("output") == null ? null : Path.of(cl.getOptionValue("output")))));
         Options projectOptions = new Options();
         projectOptions.addOption(Option.builder("t").longOpt("target").hasArg().argName("latex|maxima|smt")
                 .desc("projection target (default latex)").build());
-        commands.addCommand("Equations", "project", projectOptions,
-                "Print every equation of term files for one target",
+        commands.addCommand("Display", "project", projectOptions,
+                "Print every formula of markdown files for one target",
                 (CommandLine cl) -> run(() -> implementation.project(Target.fromName(cl.getOptionValue("target", "latex")), paths(cl))));
-        commands.addCommand("Equations", "report", new Options(),
-                "Print the count per status and the suspect equations of term files",
-                (CommandLine cl) -> run(() -> implementation.report(paths(cl))));
 
         if (args.length == 0) {
-            commands.printCommandList("openmath-lisp <command> [options] <files...>");
+            commands.printCommandList("openmath-lisp <command> [options] <markdown files...>");
             return;
         }
         try {
             CommandLine cl = commands.parse(args);
             String given = commands.getGivenCommand();
             if (given == null) {
-                commands.printCommandList("openmath-lisp <command> [options] <files...>");
+                commands.printCommandList("openmath-lisp <command> [options] <markdown files...>");
             } else if (commands.isHelpRequested()) {
                 commands.printCommandHelp(given);
             } else if (commands.hasCommand(given)) {

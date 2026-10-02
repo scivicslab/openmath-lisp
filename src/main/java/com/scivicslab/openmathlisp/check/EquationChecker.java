@@ -1,9 +1,11 @@
 package com.scivicslab.openmathlisp.check;
 
+import com.scivicslab.openmathlisp.record.CheckRecordFile;
 import com.scivicslab.openmathlisp.record.EquationRecord;
-import com.scivicslab.openmathlisp.record.TermFile;
 import com.scivicslab.openmathlisp.sexp.SExp;
+import com.scivicslab.openmathlisp.sexp.SexpWriter;
 import com.scivicslab.openmathlisp.term.Term;
+import com.scivicslab.openmathlisp.term.TermFactory;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -12,8 +14,8 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Runs the four checks on every record of a term file and sets the status
- * (TermFileAndCheckRecord_261002_oo01, decisions 2 and 5).
+ * Runs the four checks on the formulas of one markdown file and gives each a status. The structural check
+ * runs in this process; the numeric and SMT checks hand one script per file to Maxima and to Z3.
  */
 public final class EquationChecker {
 
@@ -34,70 +36,65 @@ public final class EquationChecker {
     }
 
     /**
-     * Checks every record.
-     * @param file the term file
-     * @return the file with checks and statuses filled in
+     * Checks every formula.
+     * @param equations identifier to term, in file order
+     * @param knownFunctions the names the file's declaration lists as functions
+     * @return the check records in the same order
      */
-    public TermFile check(TermFile file) {
-        Set<String> knownFunctions = file.declaration().functions().keySet();
-        Map<String, Term> forNumeric = new LinkedHashMap<>();
+    public CheckRecordFile check(Map<String, Term> equations, Set<String> knownFunctions) {
         Map<String, List<StructureChecker.Problem>> structureProblems = new LinkedHashMap<>();
-        for (EquationRecord record : file.records()) {
-            if (record.term().isEmpty()) {
-                continue;
-            }
-            List<StructureChecker.Problem> problems = structure.check(record.term().get(), knownFunctions);
-            structureProblems.put(record.id(), problems);
+        Map<String, Term> wellFormed = new LinkedHashMap<>();
+        for (Map.Entry<String, Term> entry : equations.entrySet()) {
+            List<StructureChecker.Problem> problems = structure.check(entry.getValue(), knownFunctions);
+            structureProblems.put(entry.getKey(), problems);
             if (problems.isEmpty()) {
-                forNumeric.put(record.id(), record.term().get());
+                wellFormed.put(entry.getKey(), entry.getValue());
             }
         }
-        Map<String, NumericChecker.Result> numericResults = numeric.check(forNumeric);
-        Map<String, String> smtResults = smt.check(forNumeric);
-        List<EquationRecord> checked = new ArrayList<>();
-        for (EquationRecord record : file.records()) {
-            if (record.term().isEmpty()) {
-                Map<String, SExp> checks = new LinkedHashMap<>(record.checks());
-                checks.put(":binders", keyword(":skipped"));
-                checks.put(":numeric", keyword(":skipped"));
-                checks.put(":smt", keyword(":skipped"));
-                checked.add(record.withChecks(checks, ":unparseable"));
-                continue;
-            }
+        Map<String, NumericChecker.Result> numericResults = numeric.check(wellFormed);
+        Map<String, String> smtResults = smt.check(wellFormed);
+        List<EquationRecord> records = new ArrayList<>();
+        for (Map.Entry<String, Term> entry : equations.entrySet()) {
+            String id = entry.getKey();
+            String source = SexpWriter.writeFlat(TermFactory.toSExp(entry.getValue()));
             Map<String, SExp> checks = new LinkedHashMap<>();
             checks.put(":parse", keyword(":ok"));
-            List<StructureChecker.Problem> problems = structureProblems.get(record.id());
+            List<StructureChecker.Problem> problems = structureProblems.get(id);
             if (!problems.isEmpty()) {
                 boolean arity = problems.stream().anyMatch((StructureChecker.Problem p) -> p.kind() == StructureChecker.Kind.ARITY);
                 List<String> messages = problems.stream().map(StructureChecker.Problem::message).toList();
-                checks.put(":binders", new SExp.SList(List.of(keyword(arity ? ":failed" : ":not-checkable"), new SExp.SString(String.join("; ", messages)))));
+                checks.put(":binders", new SExp.SList(List.of(keyword(arity ? ":failed" : ":not-checkable"),
+                        new SExp.SString(String.join("; ", messages)))));
                 checks.put(":numeric", keyword(":skipped"));
                 checks.put(":smt", keyword(":skipped"));
-                checked.add(record.withChecks(checks, arity ? ":suspect" : ":not-checkable"));
+                records.add(new EquationRecord(id, source, checks, arity ? ":suspect" : ":not-checkable"));
                 continue;
             }
             checks.put(":binders", keyword(":ok"));
-            NumericChecker.Result numericResult = numericResults.get(record.id());
-            String smtResult = smtResults.get(record.id());
+            NumericChecker.Result numericResult = numericResults.get(id);
+            String smtResult = smtResults.get(id);
             checks.put(":numeric", switch (numericResult) {
                 case NumericChecker.Ok ok -> keyword(":ok");
                 case NumericChecker.Failed failed -> new SExp.SList(List.of(keyword(":failed"), new SExp.SString(failed.difference())));
                 case NumericChecker.NotCheckable notCheckable -> new SExp.SList(List.of(keyword(":not-checkable"), new SExp.SString(notCheckable.why())));
             });
             checks.put(":smt", keyword(smtResult));
-            checked.add(record.withChecks(checks, status(numericResult, smtResult)));
+            records.add(new EquationRecord(id, source, checks, status(numericResult, smtResult)));
         }
-        return file.withRecords(checked);
+        return new CheckRecordFile(records);
     }
 
-    static String status(NumericChecker.Result numericResult, String smtResult) {
+    /**
+     * Gives the status of one formula from its numeric and SMT results.
+     * @param numericResult what Maxima said
+     * @param smtResult what Z3 said
+     * @return the status keyword
+     */
+    public static String status(NumericChecker.Result numericResult, String smtResult) {
         if (numericResult instanceof NumericChecker.Failed || smtResult.equals(":sat")) {
             return ":suspect";
         }
-        if (numericResult instanceof NumericChecker.Ok && (smtResult.equals(":unsat") || smtResult.equals(":not-checkable"))) {
-            return ":ok";
-        }
-        if (smtResult.equals(":unsat")) {
+        if (numericResult instanceof NumericChecker.Ok || smtResult.equals(":unsat")) {
             return ":ok";
         }
         return ":not-checkable";
