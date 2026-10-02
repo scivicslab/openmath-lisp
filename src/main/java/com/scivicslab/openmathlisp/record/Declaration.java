@@ -115,21 +115,23 @@ public final class Declaration {
             items.add(new SExp.SSymbol(":euler"));
             items.add(new SExp.SSymbol(euler));
         }
+        // the written form is sorted by name so that writing the same declaration twice gives the same
+        // text; the arguments of a function keep their order, which is the order of the lambda's variables
         if (!vectors.isEmpty()) {
             items.add(new SExp.SSymbol(":vectors"));
-            items.add(symbolList(vectors));
+            items.add(symbolList(new java.util.TreeSet<>(vectors)));
         }
         if (!coordinates.isEmpty()) {
             items.add(new SExp.SSymbol(":coordinates"));
-            items.add(symbolList(coordinates));
+            items.add(symbolList(new java.util.TreeSet<>(coordinates)));
         }
         if (!functions.isEmpty()) {
             items.add(new SExp.SSymbol(":functions"));
             List<SExp> entries = new ArrayList<>();
-            for (Map.Entry<String, List<String>> entry : functions.entrySet()) {
+            for (String name : new java.util.TreeSet<>(functions.keySet())) {
                 List<String> names = new ArrayList<>();
-                names.add(entry.getKey());
-                names.addAll(entry.getValue());
+                names.add(name);
+                names.addAll(functions.get(name));
                 entries.add(symbolList(names));
             }
             items.add(new SExp.SList(entries));

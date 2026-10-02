@@ -137,6 +137,17 @@ class MarkdownDocumentTest {
     }
 
     @Test
+    void applyDeclaration_blockConvertedBeforeTheDeclaration_isBroughtIntoLine() {
+        String text = "```om\n(declare :time t :functions ((v t)))\n```\n"
+                + "```om id=d-eq1\n(relation1:eq (calculus1:diff (fns1:lambda (t) v)) a)\n```\n";
+        MarkdownDocument.ConversionResult result = MarkdownDocument.parse(text, FACTORY).applyDeclaration();
+        assertEquals(1, result.blocks());
+        assertTrue(result.document().write().contains("(fns1:lambda (t) (v t))"), result.document().write());
+        assertEquals(0, MarkdownDocument.parse(result.document().write(), FACTORY).applyDeclaration().blocks(),
+                "a document already in line with its declaration does not change again");
+    }
+
+    @Test
     void writeTo_existingFile_leavesBackup(@TempDir Path dir) throws IOException {
         Path markdown = dir.resolve("X.md");
         Files.writeString(markdown, "$$a = b$$\n");

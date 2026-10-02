@@ -124,6 +124,76 @@ public final class MarkdownDocument {
         }
     }
 
+    /**
+     * Brings the terms already stored in om blocks into line with the file's declaration: every bare
+     * occurrence of a quantity the declaration calls a function becomes an application to the variables it
+     * depends on.
+     *
+     * <p>A document is often converted before its declaration is written, so its om blocks hold
+     * {@code (fns1:lambda (t) x)} where the page meant {@code (fns1:lambda (t) (x t))}. Reading the LaTeX
+     * again is not possible, since conversion replaced it; this rewrites the stored term instead.</p>
+     *
+     * @return the document with the declaration applied, and how many om blocks changed
+     */
+    public ConversionResult applyDeclaration() {
+        Map<String, List<String>> functions = declaration.functions();
+        if (functions.isEmpty()) {
+            return new ConversionResult(this, 0, 0, 0);
+        }
+        List<MarkdownPiece> result = new ArrayList<>();
+        int changed = 0;
+        for (MarkdownPiece piece : pieces) {
+            if (!(piece instanceof MarkdownPiece.OmBlock block) || block.isDeclaration()) {
+                result.add(piece);
+                continue;
+            }
+            Term applied = applyFunctions(block.term().get(), functions);
+            if (applied.equals(block.term().get())) {
+                result.add(piece);
+                continue;
+            }
+            String source = SexpWriter.writePretty(TermFactory.toSExp(applied));
+            String info = "om id=" + block.id().orElse("") + block.tag().map((String t) -> " tag=" + t).orElse("");
+            result.add(new MarkdownPiece.OmBlock("```" + info + "\n" + source + "\n```\n",
+                    block.id(), block.tag(), source, Optional.of(applied)));
+            changed++;
+        }
+        return new ConversionResult(new MarkdownDocument(result, declaration), changed, 0, 0);
+    }
+
+    /** Replaces a declared quantity by its application, except where it is a binder's own variable. */
+    private static Term applyFunctions(Term term, Map<String, List<String>> functions) {
+        switch (term) {
+            case Term.VariableTerm variable -> {
+                List<String> arguments = functions.get(variable.name());
+                if (arguments == null) {
+                    return variable;
+                }
+                List<Term> args = new ArrayList<>();
+                for (String argument : arguments) {
+                    args.add(new Term.VariableTerm(argument));
+                }
+                return new Term.ApplicationTerm(variable, args);
+            }
+            case Term.ApplicationTerm application -> {
+                List<Term> args = new ArrayList<>();
+                for (Term argument : application.args()) {
+                    args.add(applyFunctions(argument, functions));
+                }
+                Term head = application.head() instanceof Term.VariableTerm
+                        ? application.head() : applyFunctions(application.head(), functions);
+                return new Term.ApplicationTerm(head, args);
+            }
+            case Term.BindingTerm binding -> {
+                return new Term.BindingTerm(binding.binder(), binding.variables(),
+                        applyFunctions(binding.body(), functions));
+            }
+            default -> {
+                return term;
+            }
+        }
+    }
+
     /** Splits a run of ordinary markdown into om spans, LaTeX blocks, LaTeX spans and plain text. */
     private static void addText(List<MarkdownPiece> pieces, String text, TermFactory factory) {
         if (text.isEmpty()) {

@@ -10,9 +10,12 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * The structural check: argument counts match the symbol table, every bound variable occurs in its body,
- * and every variable free inside a binder body also occurs outside it or is a declared function
- * (TermFileAndCheckRecord_261002_oo01, decision 2).
+ * The structural check: argument counts match the symbol table, and every bound variable occurs in its
+ * body (TermFileAndCheckRecord_261002_oo01, decision 1).
+ *
+ * <p>A bound variable missing from the body means the term says something else than the page does:
+ * {@code (calculus1:diff (fns1:lambda (t) x))} differentiates a quantity that does not depend on {@code t},
+ * so its value is zero. Declaring {@code x} a function of {@code t} is what the page meant.</p>
  */
 public final class StructureChecker {
 
@@ -36,15 +39,13 @@ public final class StructureChecker {
     /**
      * Checks a term.
      * @param term the term
-     * @param knownFunctions names declared as functions in the term file, allowed free in binder bodies
+     * @param knownFunctions kept for the caller's signature; no longer consulted
      * @return the problems found, empty when the term passes
      */
     public List<Problem> check(Term term, Set<String> knownFunctions) {
         List<Problem> problems = new ArrayList<>();
         checkArities(term, problems);
-        Set<String> outside = new LinkedHashSet<>();
-        collectVariablesOutsideBindings(term, outside);
-        checkBindings(term, outside, knownFunctions, problems);
+        checkBindings(term, problems);
         return problems;
     }
 
@@ -73,44 +74,22 @@ public final class StructureChecker {
         }
     }
 
-    private void collectVariablesOutsideBindings(Term term, Set<String> names) {
-        switch (term) {
-            case Term.VariableTerm variable -> names.add(variable.name());
-            case Term.ApplicationTerm application -> {
-                collectVariablesOutsideBindings(application.head(), names);
-                for (Term arg : application.args()) {
-                    collectVariablesOutsideBindings(arg, names);
-                }
-            }
-            default -> {
-            }
-        }
-    }
-
-    private void checkBindings(Term term, Set<String> outside, Set<String> knownFunctions, List<Problem> problems) {
+    private void checkBindings(Term term, List<Problem> problems) {
         switch (term) {
             case Term.BindingTerm binding -> {
                 Set<String> inBody = new LinkedHashSet<>();
                 collectAllVariables(binding.body(), inBody);
                 for (Term.VariableTerm bound : binding.variables()) {
                     if (!inBody.contains(bound.name())) {
-                        problems.add(new Problem(Kind.DEPENDENCE, "bound variable " + bound.name() + " does not occur in the body of " + binding.binder().qualifiedName()));
+                        problems.add(new Problem(Kind.DEPENDENCE, "bound variable " + bound.name()
+                                + " does not occur in the body of " + binding.binder().qualifiedName()));
                     }
                 }
-                Set<String> boundNames = new LinkedHashSet<>();
-                for (Term.VariableTerm bound : binding.variables()) {
-                    boundNames.add(bound.name());
-                }
-                for (String name : inBody) {
-                    if (!boundNames.contains(name) && !outside.contains(name) && !knownFunctions.contains(name)) {
-                        problems.add(new Problem(Kind.DEPENDENCE, "variable " + name + " is free in a binder body and occurs nowhere else"));
-                    }
-                }
-                checkBindings(binding.body(), outside, knownFunctions, problems);
+                checkBindings(binding.body(), problems);
             }
             case Term.ApplicationTerm application -> {
                 for (Term arg : application.args()) {
-                    checkBindings(arg, outside, knownFunctions, problems);
+                    checkBindings(arg, problems);
                 }
             }
             default -> {

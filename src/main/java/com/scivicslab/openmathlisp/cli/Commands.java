@@ -1,10 +1,12 @@
 package com.scivicslab.openmathlisp.cli;
 
+import com.scivicslab.openmathlisp.markdown.DeclarationSuggester;
 import com.scivicslab.openmathlisp.markdown.DocumentIdentifier;
 import com.scivicslab.openmathlisp.markdown.MarkdownDocument;
 import com.scivicslab.openmathlisp.markdown.MarkdownPiece;
 import com.scivicslab.openmathlisp.project.ProjectionException;
 import com.scivicslab.openmathlisp.record.CheckRecordFile;
+import com.scivicslab.openmathlisp.record.Declaration;
 import com.scivicslab.openmathlisp.record.EquationRecord;
 import com.scivicslab.openmathlisp.sexp.SExp;
 import com.scivicslab.openmathlisp.sexp.SexpWriter;
@@ -20,7 +22,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-/** The five subcommands: convert, check, report, render, project. */
+/** The six subcommands: convert, check, report, suggest, render, project. */
 public final class Commands {
 
     private final Toolchain toolchain;
@@ -47,10 +49,54 @@ public final class Commands {
             MarkdownDocument document = MarkdownDocument.read(markdown, toolchain.factory());
             MarkdownDocument.ConversionResult result =
                     document.convert(DocumentIdentifier.prefixFor(markdown), toolchain.factory());
-            result.document().writeTo(markdown);
+            // a document is often converted before its declaration is written, so the blocks already there
+            // are brought into line with it too
+            MarkdownDocument.ConversionResult applied = result.document().applyDeclaration();
+            applied.document().writeTo(markdown);
             out.println(markdown + ": " + result.blocks() + " om blocks, " + result.spans() + " om spans, "
-                    + result.unreadable() + " left as LaTeX");
+                    + result.unreadable() + " left as LaTeX, " + applied.blocks() + " brought into line");
         }
+    }
+
+    /**
+     * {@code suggest}: proposes the declaration each markdown file is missing. Prints the om block; with
+     * {@code write}, puts it right after the front matter, replacing the file's current declaration.
+     *
+     * @param markdownFiles the markdown files
+     * @param write true to write the block into the file, false to print it
+     * @throws IOException when a file cannot be read or written
+     */
+    public void suggest(List<Path> markdownFiles, boolean write) throws IOException {
+        for (Path markdown : markdownFiles) {
+            String text = Files.readString(markdown, StandardCharsets.UTF_8);
+            MarkdownDocument document = MarkdownDocument.parse(text, toolchain.factory());
+            DeclarationSuggester.Evidence evidence = DeclarationSuggester.evidence(text);
+            Declaration proposed = DeclarationSuggester.withSettledLetters(
+                    DeclarationSuggester.suggest(text, document), evidence);
+            if (!write) {
+                out.println("# " + markdown);
+                out.print(DeclarationSuggester.asOmBlock(proposed, evidence));
+                continue;
+            }
+            Files.writeString(markdown, withDeclaration(text, proposed), StandardCharsets.UTF_8);
+            out.println(markdown + ": " + proposed);
+        }
+    }
+
+    /** Puts the declaration right after the front matter, replacing any declaration block already there. */
+    static String withDeclaration(String text, Declaration declaration) {
+        String block = "```om\n" + declaration + "\n```\n";
+        java.util.regex.Matcher existing = java.util.regex.Pattern
+                .compile("(?ms)^```om\\s*\\n\\(declare.*?^```[ \\t]*$\\n?").matcher(text);
+        if (existing.find()) {
+            return text.substring(0, existing.start()) + block + text.substring(existing.end());
+        }
+        java.util.regex.Matcher frontMatter = java.util.regex.Pattern
+                .compile("(?s)\\A---\\n.*?\\n---\\n").matcher(text);
+        if (frontMatter.find()) {
+            return text.substring(0, frontMatter.end()) + "\n" + block + text.substring(frontMatter.end());
+        }
+        return block + "\n" + text;
     }
 
     /**

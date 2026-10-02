@@ -13,7 +13,7 @@ import java.util.Set;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
-/** The structural check: arity against the table, bound variables in bodies, free variables in binder bodies. */
+/** The structural check: arity against the symbol table, and bound variables occurring in their bodies. */
 @Tag("TermFileAndCheckRecord_261002_oo01")
 class StructureCheckerTest {
 
@@ -44,10 +44,8 @@ class StructureCheckerTest {
     }
 
     @Test
-    void check_variableOnlyInsideBinderBody_reportedUnlessDeclaredFunction() {
-        String text = "(relation1:eq y (calculus1:diff (fns1:lambda (t) (arith1:times t q))))";
-        assertEquals(List.of("variable q is free in a binder body and occurs nowhere else"), check(text));
-        assertEquals(StructureChecker.Kind.DEPENDENCE, CHECKER.check(FACTORY.fromSExp(SexpReader.readOne(text)), Set.of()).get(0).kind());
-        assertTrue(CHECKER.check(FACTORY.fromSExp(SexpReader.readOne(text)), Set.of("q")).isEmpty());
+    void check_constantOnlyInsideAnIntegrand_notReported() {
+        assertTrue(check("(relation1:eq B (calculus1:defint (interval1:interval 0 1)"
+                + " (fns1:lambda (x) (arith1:times A (transc1:sin (arith1:times omega x))))))").isEmpty());
     }
 }

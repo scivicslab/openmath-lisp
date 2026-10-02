@@ -17,7 +17,7 @@ import java.util.logging.Logger;
 
 /**
  * Entry point of the {@code openmath-lisp} command line tool.
- * Usage: {@code openmath-lisp <convert|check|report|render|project> [options] <files...>}.
+ * Usage: {@code openmath-lisp <convert|check|report|suggest|render|project> [options] <files...>}.
  */
 public final class Main {
 
@@ -41,6 +41,12 @@ public final class Main {
         commands.addCommand("Formulas", "check", new Options(),
                 "Run the structural, numeric (Maxima) and SMT (Z3) checks; write X.lisp beside X.md",
                 (CommandLine cl) -> run(() -> implementation.check(paths(cl))));
+        Options suggestOptions = new Options();
+        suggestOptions.addOption(Option.builder("w").longOpt("write").desc(
+                "write the proposed declaration into the file instead of printing it").build());
+        commands.addCommand("Formulas", "suggest", suggestOptions,
+                "Propose the declaration a markdown file is missing, with the evidence for e and i",
+                (CommandLine cl) -> run(() -> implementation.suggest(paths(cl), cl.hasOption("write"))));
         commands.addCommand("Formulas", "report", new Options(),
                 "Print the count per status, the unreadable markers and the suspect formulas",
                 (CommandLine cl) -> run(() -> implementation.report(paths(cl))));
