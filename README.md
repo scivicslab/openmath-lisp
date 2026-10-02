@@ -53,6 +53,11 @@ bin/openmath-lisp render  path/to/X.md      # om -> LaTeX markdown, for KaTeX
 bin/openmath-lisp project --target maxima path/to/X.md
 ```
 
+
+`convert` turns an inline variable or formula into an om span. A chain of two or more relations
+stays LaTeX, since `relation1:eq` takes two arguments and one om span holds one s-expression; so
+does anything the reader cannot read. Either way it leaves a marker naming the reason, on the line
+before a display formula and immediately before an inline one, and `report` counts them.
 A declaration block right after the front matter fixes what the LaTeX text cannot: the time
 variable for `\dot{}`, which letters are the imaginary unit and Euler's number, which variables
 are vectors, which coordinates are independent when dotted, and which variables depend on which.
