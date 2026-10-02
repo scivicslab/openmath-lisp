@@ -74,10 +74,20 @@ public sealed interface MarkdownPiece
 
     /**
      * The comment that conversion writes before a LaTeX block it could not read.
-     * @param raw the comment line including its newline
+     * @param raw the comment text, with the trailing newline when it has a line of its own
      * @param id the identifier the block would have had
      * @param reason the reason code from the LaTeX reader
      */
     record UnreadableMarker(String raw, String id, String reason) implements MarkdownPiece {
+
+        /**
+         * Whether the formula this marker belongs to is an inline one. A display formula's identifier ends
+         * with the display unit it came from, an inline one's with the inline formula it came from, and an
+         * inline marker sits inside a line while a display marker has a line of its own.
+         * @return true when the identifier names an inline formula
+         */
+        public boolean isInline() {
+            return id.matches(".*-in\\d+$");
+        }
     }
 }

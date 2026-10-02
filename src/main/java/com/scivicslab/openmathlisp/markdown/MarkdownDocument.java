@@ -41,7 +41,7 @@ public final class MarkdownDocument {
     private static final Pattern LATEX_BLOCK = Pattern.compile("\\$\\$(.+?)\\$\\$", Pattern.DOTALL);
     private static final Pattern LATEX_SPAN = Pattern.compile("(?<!\\$)\\$(?!\\$)([^$\\n]+?)\\$(?!\\$)");
     private static final Pattern MARKER = Pattern.compile(
-            "(?m)^<!--[ \\t]*om:unreadable[ \\t]+id=(\\S+)[ \\t]+reason=(\\S+)[ \\t]*-->[ \\t]*\\n?");
+            "<!--[ \\t]*om:unreadable[ \\t]+id=(\\S+)[ \\t]+reason=(\\S+)[ \\t]*-->[ \\t]*\\n?");
     private static final Pattern ID_IN_INFO = Pattern.compile("\\bid=(\\S+)");
     private static final Pattern TAG_IN_INFO = Pattern.compile("\\btag=(\\S+)");
     private static final Pattern UNIT_NUMBER_IN_ID = Pattern.compile("-eq(\\d+)(?:-\\d+)?$");
@@ -348,6 +348,8 @@ public final class MarkdownDocument {
         int blocks = 0;
         int spans = 0;
         int unreadable = 0;
+        int inlineNumber = 0;
+        Optional<String> pendingMarkerId = Optional.empty();
         Map<String, String> replaced = new LinkedHashMap<>();
         for (int i = 0; i < pieces.size(); i++) {
             MarkdownPiece piece = pieces.get(i);
@@ -356,20 +358,32 @@ public final class MarkdownDocument {
                 result.add(piece);
                 continue;
             }
-            if (piece instanceof MarkdownPiece.UnreadableMarker) {
-                continue; // a fresh marker is written below if the block is still unreadable
-            }
-            if (piece instanceof MarkdownPiece.LatexSpan span) {
-                Optional<Term> term = readInline(span.latex(), factory);
-                if (term.isPresent()) {
-                    String source = SexpWriter.writeFlat(TermFactory.toSExp(term.get()));
-                    result.add(new MarkdownPiece.OmSpan("`om:" + source + "`", source, term.get()));
-                    spans++;
-                } else {
-                    result.add(piece);
-                }
+            if (piece instanceof MarkdownPiece.UnreadableMarker marker) {
+                // A fresh marker is written below if the formula is still unreadable. The identifier is kept
+                // so that an inline marker, whose formula has no other place to carry one, keeps the name the
+                // check records and the report already use.
+                pendingMarkerId = marker.isInline() ? Optional.of(marker.id()) : Optional.empty();
                 continue;
             }
+            if (piece instanceof MarkdownPiece.LatexSpan span) {
+                InlineRead read = readInline(span.latex());
+                if (read.term().isPresent()) {
+                    Term term = read.term().get();
+                    String source = SexpWriter.writeFlat(TermFactory.toSExp(term));
+                    result.add(new MarkdownPiece.OmSpan("`om:" + source + "`", source, term));
+                    spans++;
+                } else {
+                    inlineNumber++;
+                    String id = pendingMarkerId.isPresent() ? pendingMarkerId.get() : idPrefix + "-in" + inlineNumber;
+                    result.add(new MarkdownPiece.UnreadableMarker(
+                            "<!-- om:unreadable id=" + id + " reason=" + read.reason() + " -->", id, read.reason()));
+                    result.add(piece);
+                    unreadable++;
+                }
+                pendingMarkerId = Optional.empty();
+                continue;
+            }
+            pendingMarkerId = Optional.empty();
             if (!(piece instanceof MarkdownPiece.LatexBlock block)) {
                 result.add(piece);
                 continue;
@@ -409,23 +423,43 @@ public final class MarkdownDocument {
         return new MarkdownPiece.OmBlock(raw, Optional.of(id), tag, source, Optional.of(term));
     }
 
-    /** An inline formula is converted when it is a variable name or a readable s-expression-free formula. */
-    private Optional<Term> readInline(String latex, TermFactory factory) {
+    /** One inline formula read, or the reason the reader could not turn it into one term. */
+    private record InlineRead(Optional<Term> term, String reason) {
+        static InlineRead of(Term term) {
+            return new InlineRead(Optional.of(term), "");
+        }
+
+        static InlineRead failed(String reason) {
+            return new InlineRead(Optional.empty(), reason);
+        }
+    }
+
+    /**
+     * Reads one inline formula. A variable, a constant and a formula all become om spans
+     * (LatexReaderDecisions_261002_oo01, why inline equations are converted too). A chain of two or more
+     * relations does not: {@code relation1:eq} takes two arguments, so {@code a = b = c} is two terms, while
+     * one om span holds one s-expression. A display block splits into several om blocks in that case; an
+     * inline formula cannot be split without rewriting the sentence around it, so it stays LaTeX.
+     */
+    private InlineRead readInline(String latex) {
         String text = latex.strip();
         if (text.isEmpty()) {
-            return Optional.empty();
+            return InlineRead.failed("empty");
         }
         try {
             LatexParser.RelationChain chain = LatexParser.parse(text, declaration);
-            if (chain.relations().isEmpty() && chain.operands().size() == 1) {
-                Term term = chain.operands().get(0);
-                if (term instanceof Term.VariableTerm || term instanceof Term.SymbolTerm) {
-                    return Optional.of(term);
-                }
+            if (chain.relations().isEmpty()) {
+                return InlineRead.of(chain.operands().get(0));
             }
-            return Optional.empty();
-        } catch (LatexReadException | TermFormatException e) {
-            return Optional.empty();
+            if (chain.relations().size() == 1) {
+                return InlineRead.of(new Term.ApplicationTerm(chain.relations().get(0),
+                        List.of(chain.operands().get(0), chain.operands().get(1))));
+            }
+            return InlineRead.failed("relation-chain");
+        } catch (LatexReadException e) {
+            return InlineRead.failed(e.getReason());
+        } catch (TermFormatException e) {
+            return InlineRead.failed("term-format");
         }
     }
 

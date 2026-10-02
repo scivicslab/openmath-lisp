@@ -173,10 +173,14 @@ public final class Commands {
         StringBuilder suspects = new StringBuilder();
         int all = 0;
         int unreadable = 0;
+        int inlineUnreadable = 0;
         for (Path markdown : markdownFiles) {
             MarkdownDocument document = MarkdownDocument.read(markdown, toolchain.factory());
             for (MarkdownPiece.UnreadableMarker marker : document.markers()) {
                 unreadable++;
+                if (marker.isInline()) {
+                    inlineUnreadable++;
+                }
                 reasons.merge(marker.reason(), 1, Integer::sum);
             }
             for (MarkdownPiece.OmError error : document.errors()) {
@@ -214,7 +218,8 @@ public final class Commands {
         for (String status : List.of(":ok", ":suspect", ":not-checkable")) {
             out.println("  " + status + ": " + totals.getOrDefault(status, 0));
         }
-        out.println("still LaTeX (unreadable): " + unreadable);
+        out.println("still LaTeX (unreadable): " + unreadable
+                + " (display " + (unreadable - inlineUnreadable) + ", inline " + inlineUnreadable + ")");
         for (Map.Entry<String, Integer> entry : reasons.entrySet()) {
             out.println("  " + entry.getKey() + ": " + entry.getValue());
         }
