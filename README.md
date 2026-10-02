@@ -33,25 +33,39 @@ rm -rf target && mvn install
 
 ## Use
 
+Formulas live in the markdown itself. A display formula is a fenced code block with the info
+string `om`, an inline one is a code span starting with `om:`; both hold an s-expression. The
+LaTeX a reader needs is generated at display time and never stored.
+
+````markdown
+```om id=SlaterVol1-p051-060-eq1 tag=17
+(relation1:eq (arith1:times m (calculus1:nthdiff 2 (fns1:lambda (t) (x t)))) 0)
+```
+角振動数 `om:omega_n` について
+````
+
 ```bash
-bin/openmath-lisp read  path/to/X.md        # $$ blocks -> X.lisp beside the markdown
-bin/openmath-lisp check path/to/X.lisp      # structural, Maxima and Z3 checks; rewrites X.lisp
-bin/openmath-lisp report path/to/*.lisp     # counts per status and the suspect equations
-bin/openmath-lisp project --target maxima path/to/X.lisp
+bin/openmath-lisp convert path/to/X.md      # LaTeX -> om blocks and om spans, in place
+bin/openmath-lisp check   path/to/X.md      # structural, Maxima and Z3 checks; writes X.lisp
+bin/openmath-lisp report  path/to/*/*.md    # counts per status, unreadable reasons, suspects
+bin/openmath-lisp render  path/to/X.md      # om -> LaTeX markdown, for KaTeX
+bin/openmath-lisp project --target maxima path/to/X.md
 ```
 
-The first line of `X.lisp` is a declaration that fixes what the LaTeX text cannot: the time
+A declaration block right after the front matter fixes what the LaTeX text cannot: the time
 variable for `\dot{}`, which letters are the imaginary unit and Euler's number, which variables
 are vectors, which coordinates are independent when dotted, and which variables depend on which.
-Edit it and run `read` again.
+Write it and run `convert` again; it converts only what is still LaTeX.
 
-```lisp
+````markdown
+```om
 (declare :time t :imaginary i :euler e :functions ((x t) (u r t)))
 ```
+````
 
-Each equation becomes a record with the four check results and a status:
-`:ok`, `:suspect`, `:not-checkable` or `:unparseable`. Mark a record `:edited t` after
-correcting its term by hand; `read` keeps such terms.
+`check` writes one record per formula into `X.lisp` with the four check results and a status:
+`:ok`, `:suspect`, `:not-checkable` or `:unparseable`. The records hold no terms, so `X.lisp`
+can be deleted and produced again. To correct a formula, edit its om block in the markdown.
 
 ## Symbol table
 
