@@ -46,6 +46,7 @@ LaTeX a reader needs is generated at display time and never stored.
 
 ```bash
 bin/openmath-lisp convert path/to/X.md      # LaTeX -> om blocks and om spans, in place
+bin/openmath-lisp suggest path/to/X.md      # propose the declaration the document is missing
 bin/openmath-lisp check   path/to/X.md      # structural, Maxima and Z3 checks; writes X.lisp
 bin/openmath-lisp report  path/to/*/*.md    # counts per status, unreadable reasons, suspects
 bin/openmath-lisp render  path/to/X.md      # om -> LaTeX markdown, for KaTeX
@@ -63,9 +64,21 @@ Write it and run `convert` again; it converts only what is still LaTeX.
 ```
 ````
 
-`check` writes one record per formula into `X.lisp` with the four check results and a status:
-`:ok`, `:suspect`, `:not-checkable` or `:unparseable`. The records hold no terms, so `X.lisp`
-can be deleted and produced again. To correct a formula, edit its om block in the markdown.
+`check` writes one record per formula into `X.lisp` with the term, the LaTeX projected from it, the
+four check results and a status: `:ok`, `:suspect`, `:not-checkable` or `:unparseable`. Everything in
+it comes from the term, so `X.lisp` can be deleted and produced again.
+
+When a formula is suspect, the fault is in one of four places, and each has a record:
+
+| where | what holds it |
+|---|---|
+| the page | the PDF |
+| the OCR reading of it | `X.ocr.lisp`, written by `convert` and kept in version control |
+| the term the LaTeX reader built | the om block in `X.md` |
+| the LaTeX projected back from the term | `X.lisp` |
+
+`report` prints all three of the files' forms for each suspect formula. To correct a formula, edit
+its om block in the markdown and run `check` again.
 
 ## Symbol table
 
