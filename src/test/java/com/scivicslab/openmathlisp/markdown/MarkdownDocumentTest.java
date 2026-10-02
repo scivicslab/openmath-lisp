@@ -52,7 +52,8 @@ class MarkdownDocumentTest {
     void convert_readableDisplayFormula_becomesOmBlockWithIdentifier() {
         String text = PHYSICS_DECLARATION + "\n$$m\\ddot{x} + kx = 0$$\n";
         MarkdownDocument.ConversionResult result = MarkdownDocument.parse(text, FACTORY).convert("SlaterVol1-p051-060", FACTORY);
-        assertEquals(1, result.converted());
+        assertEquals(1, result.blocks());
+        assertEquals(0, result.spans());
         assertEquals(0, result.unreadable());
         String written = result.document().write();
         assertTrue(written.contains("```om id=SlaterVol1-p051-060-eq1"), written);
@@ -70,7 +71,7 @@ class MarkdownDocumentTest {
     void convert_chainOfRelations_becomesOneOmBlockPerPair() {
         MarkdownDocument.ConversionResult result =
                 MarkdownDocument.parse("$$a = b + c = 2d$$\n", FACTORY).convert("d", FACTORY);
-        assertEquals(2, result.converted());
+        assertEquals(2, result.blocks());
         String written = result.document().write();
         assertTrue(written.contains("```om id=d-eq1-1"), written);
         assertTrue(written.contains("```om id=d-eq1-2"), written);
@@ -113,9 +114,10 @@ class MarkdownDocumentTest {
     void convert_inlineVariable_becomesOmSpanButFormulaStaysLatex() {
         MarkdownDocument.ConversionResult result =
                 MarkdownDocument.parse("変数 $\\omega_n$ と式 $a + b$ がある。\n", FACTORY).convert("d", FACTORY);
-        assertEquals(1, result.converted());
+        assertEquals(0, result.blocks());
+        assertEquals(1, result.spans());
         String written = result.document().write();
-        assertTrue(written.contains("`om:\\omega_n`") || written.contains("`om:"), written);
+        assertTrue(written.contains("`om:omega_n`"), written);
         assertTrue(written.contains("$a + b$"), written);
     }
 

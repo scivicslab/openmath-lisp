@@ -48,7 +48,8 @@ public final class Commands {
             MarkdownDocument.ConversionResult result =
                     document.convert(DocumentIdentifier.prefixFor(markdown), toolchain.factory());
             result.document().writeTo(markdown);
-            out.println(markdown + ": " + result.converted() + " converted, " + result.unreadable() + " unreadable");
+            out.println(markdown + ": " + result.blocks() + " om blocks, " + result.spans() + " om spans, "
+                    + result.unreadable() + " left as LaTeX");
         }
     }
 

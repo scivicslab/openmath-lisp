@@ -65,6 +65,13 @@ class ProjectorTest {
     }
 
     @Test
+    void project_power_exponentNeedsNoBracketsBaseDoes() {
+        assertEquals("{e}^{i x}", PROJECTOR.project(term("(arith1:power e (arith1:times i x))"), Target.LATEX));
+        assertEquals("{a}^{2}", PROJECTOR.project(term("(arith1:power a 2)"), Target.LATEX));
+        assertEquals("{\\left(a + b\\right)}^{2}", PROJECTOR.project(term("(arith1:power (arith1:plus a b) 2)"), Target.LATEX));
+    }
+
+    @Test
     void project_root_degreeTwoWithoutIndex() {
         assertEquals("\\sqrt{x}", PROJECTOR.project(term("(arith1:root x 2)"), Target.LATEX));
         assertEquals("\\sqrt[3]{x}", PROJECTOR.project(term("(arith1:root x 3)"), Target.LATEX));

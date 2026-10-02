@@ -210,8 +210,18 @@ public final class MarkdownDocument {
         return pieces;
     }
 
-    /** What conversion changed in one file. */
-    public record ConversionResult(MarkdownDocument document, int converted, int unreadable) {
+    /**
+     * What conversion changed in one file.
+     * @param document the converted document
+     * @param blocks how many display formulas became om blocks
+     * @param spans how many inline formulas became om spans
+     * @param unreadable how many display formulas stayed LaTeX with a marker
+     */
+    public record ConversionResult(MarkdownDocument document, int blocks, int spans, int unreadable) {
+        /** @return the formulas written as formula source, display and inline together */
+        public int converted() {
+            return blocks + spans;
+        }
     }
 
     /**
@@ -225,7 +235,8 @@ public final class MarkdownDocument {
     public ConversionResult convert(String idPrefix, TermFactory factory) {
         List<MarkdownPiece> result = new ArrayList<>();
         int unitNumber = 0;
-        int converted = 0;
+        int blocks = 0;
+        int spans = 0;
         int unreadable = 0;
         for (int i = 0; i < pieces.size(); i++) {
             MarkdownPiece piece = pieces.get(i);
@@ -242,7 +253,7 @@ public final class MarkdownDocument {
                 if (term.isPresent()) {
                     String source = SexpWriter.writeFlat(TermFactory.toSExp(term.get()));
                     result.add(new MarkdownPiece.OmSpan("`om:" + source + "`", source, term.get()));
-                    converted++;
+                    spans++;
                 } else {
                     result.add(piece);
                 }
@@ -273,10 +284,10 @@ public final class MarkdownDocument {
             for (int k = 0; k < equations.size(); k++) {
                 String partId = equations.size() > 1 ? id + "-" + (k + 1) : id;
                 result.add(blockFor(partId, read.tag(), equations.get(k).term().get()));
-                converted++;
+                blocks++;
             }
         }
-        return new ConversionResult(new MarkdownDocument(result, declaration), converted, unreadable);
+        return new ConversionResult(new MarkdownDocument(result, declaration), blocks, spans, unreadable);
     }
 
     private static MarkdownPiece.OmBlock blockFor(String id, Optional<String> tag, Term term) {

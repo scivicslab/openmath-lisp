@@ -40,7 +40,7 @@
   :smt    (:function "/"))
 (arith1:power
   :role application :arity 2
-  :latex  (:template "{~1}^{~2}" 50)
+  :latex  (:special "power")
   :maxima (:infix "^" 50 :right)
   :smt    (:function "^"))
 (arith1:abs

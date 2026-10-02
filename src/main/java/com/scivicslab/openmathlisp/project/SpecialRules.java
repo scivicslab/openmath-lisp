@@ -17,6 +17,7 @@ final class SpecialRules {
             case "partialdiff" -> partialDiff(args, projector, target);
             case "partialdiffdegree" -> partialDiffDegree(args, projector, target);
             case "root" -> root(args, projector, target);
+            case "power" -> power(args, projector, target);
             default -> throw new ProjectionException("unknown special rule " + name);
         };
     }
@@ -76,6 +77,20 @@ final class SpecialRules {
             }
             default -> throw new ProjectionException("smt cannot express calculus1:partialdiff");
         }
+    }
+
+    /**
+     * {@code (arith1:power b e)} in LaTeX: {@code {b}^{e}}. The base is parenthesized when it binds more
+     * weakly than the power, because {@code {a + b}^{2}} shows no bracket and reads as {@code a + b^2}.
+     * The exponent never is: the braces of {@code ^{...}} already group it.
+     */
+    private static Projector.Projected power(List<Term> args, Projector projector, Target target) {
+        if (target != Target.LATEX || args.size() != 2) {
+            throw new ProjectionException("power special rule is only for LaTeX with 2 arguments");
+        }
+        Projector.Projected base = projector.projectWithPriority(args.get(0), target);
+        return new Projector.Projected("{" + projector.parenthesize(base, 50, target) + "}^{"
+                + projector.project(args.get(1), target) + "}", 50);
     }
 
     /** {@code (arith1:root x n)}: {@code \\sqrt{x}} when n is 2, else {@code \\sqrt[n]{x}}. */

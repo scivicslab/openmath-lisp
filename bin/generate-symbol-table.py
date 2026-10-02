@@ -27,7 +27,7 @@ RULES = {
  'arith1:minus': (infix(' - ', 20), infix('-', 20), func('-')),
  'arith1:times': (infix(' ', 30), infix('*', 30), func('*')),
  'arith1:divide': (tmpl('\\\\frac{~1}{~2}'), infix('/', 30), func('/')),
- 'arith1:power': (tmpl('{~1}^{~2}', 50), infix('^', 50, 'right'), func('^')),
+ 'arith1:power': (special('power'), infix('^', 50, 'right'), func('^')),
  'arith1:abs': (tmpl('\\\\left|~1\\\\right|'), func('abs'), NIL),
  'arith1:root': (special('root'), tmpl('(~1)^(1/(~2))'), NIL),
  'arith1:sum': (tmpl('\\\\sum_{~2.v1 = ~1.1}^{~1.2} ~2.b', 35, 15), tmpl('sum(~2.b, ~2.v1, ~1.1, ~1.2)'), NIL),
