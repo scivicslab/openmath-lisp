@@ -62,6 +62,13 @@ class MarkdownDocumentTest {
     }
 
     @Test
+    void convert_readableFormula_reportsTheLatexItReplaced() {
+        MarkdownDocument.ConversionResult result =
+                MarkdownDocument.parse("$$a = b + c$$\n", FACTORY).convert("d", FACTORY);
+        assertEquals("a = b + c", result.replacedLatex().get("d-eq1"));
+    }
+
+    @Test
     void convert_taggedFormula_keepsTheBookEquationNumber() {
         String written = MarkdownDocument.parse("$$a = b \\tag{17}$$\n", FACTORY).convert("d", FACTORY).document().write();
         assertTrue(written.contains("```om id=d-eq1 tag=17"), written);
@@ -86,6 +93,15 @@ class MarkdownDocumentTest {
         String written = result.document().write();
         assertTrue(written.startsWith("<!-- om:unreadable id=d-eq1 reason=ellipsis -->"), written);
         assertTrue(written.contains("$$1 + \\cdots = 2$$"), written);
+    }
+
+    @Test
+    void convert_aSplitBlockThenAgain_doesNotRenumberTheBlocksAfterIt() {
+        String text = "$$a = b = c$$\n\n$$x = y$$\n";
+        MarkdownDocument once = MarkdownDocument.parse(text, FACTORY).convert("d", FACTORY).document();
+        assertTrue(once.write().contains("```om id=d-eq2"), once.write());
+        MarkdownDocument twice = MarkdownDocument.parse(once.write(), FACTORY).convert("d", FACTORY).document();
+        assertEquals(once.write(), twice.write());
     }
 
     @Test
@@ -145,6 +161,21 @@ class MarkdownDocumentTest {
         assertTrue(result.document().write().contains("(fns1:lambda (t) (v t))"), result.document().write());
         assertEquals(0, MarkdownDocument.parse(result.document().write(), FACTORY).applyDeclaration().blocks(),
                 "a document already in line with its declaration does not change again");
+    }
+
+    @Test
+    void applyDeclaration_theVariableAnIntegralBinds_staysBare() {
+        String text = "```om\n(declare :functions ((x t)))\n```\n"
+                + "```om id=d-eq1\n(calculus1:int (fns1:lambda (x) (arith1:times a x)))\n```\n";
+        MarkdownDocument.ConversionResult result = MarkdownDocument.parse(text, FACTORY).applyDeclaration();
+        assertEquals(0, result.blocks(), "the integration variable is not a function here");
+    }
+
+    @Test
+    void convert_derivativeByADeclaredFunctionName_readsItAsTheDifferentiationVariable() {
+        String text = "```om\n(declare :functions ((x t)))\n```\n$$\\frac{d}{dx} \\arctan x = y$$\n";
+        String written = MarkdownDocument.parse(text, FACTORY).convert("d", FACTORY).document().write();
+        assertTrue(written.contains("(calculus1:diff (fns1:lambda (x) (transc1:arctan x)))"), written);
     }
 
     @Test

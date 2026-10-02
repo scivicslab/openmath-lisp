@@ -7,6 +7,7 @@ import com.scivicslab.openmathlisp.markdown.MarkdownPiece;
 import com.scivicslab.openmathlisp.project.ProjectionException;
 import com.scivicslab.openmathlisp.record.CheckRecordFile;
 import com.scivicslab.openmathlisp.record.Declaration;
+import com.scivicslab.openmathlisp.record.SourceRecordFile;
 import com.scivicslab.openmathlisp.record.EquationRecord;
 import com.scivicslab.openmathlisp.sexp.SExp;
 import com.scivicslab.openmathlisp.sexp.SexpWriter;
@@ -53,6 +54,9 @@ public final class Commands {
             // are brought into line with it too
             MarkdownDocument.ConversionResult applied = result.document().applyDeclaration();
             applied.document().writeTo(markdown);
+            // what the OCR produced is about to be gone from the markdown, so it is recorded beside it
+            Path sourcePath = SourceRecordFile.pathFor(markdown);
+            SourceRecordFile.readOrEmpty(sourcePath).merge(result.replacedLatex()).writeTo(sourcePath);
             out.println(markdown + ": " + result.blocks() + " om blocks, " + result.spans() + " om spans, "
                     + result.unreadable() + " left as LaTeX, " + applied.blocks() + " brought into line");
         }
@@ -182,11 +186,18 @@ public final class Commands {
             if (!Files.exists(recordPath)) {
                 continue;
             }
+            SourceRecordFile sources = SourceRecordFile.readOrEmpty(SourceRecordFile.pathFor(markdown));
             for (EquationRecord record : CheckRecordFile.read(recordPath).records()) {
                 all++;
                 totals.merge(record.status(), 1, Integer::sum);
                 if (record.status().equals(":suspect")) {
-                    suspects.append(record.id()).append('\n').append("  source: ").append(record.source()).append('\n');
+                    suspects.append(record.id()).append('\n');
+                    String ocr = sources.ocrOf(record.id());
+                    if (ocr != null) {
+                        suspects.append("  ocr  : ").append(ocr).append('\n');
+                    }
+                    suspects.append("  term : ").append(record.term()).append('\n');
+                    suspects.append("  latex: ").append(record.latex()).append('\n');
                     for (Map.Entry<String, SExp> check : record.checks().entrySet()) {
                         if (check.getValue() instanceof SExp.SList detail) {
                             suspects.append("  ").append(check.getKey()).append(": ")

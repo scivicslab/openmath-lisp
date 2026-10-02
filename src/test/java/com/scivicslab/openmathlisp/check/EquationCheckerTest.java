@@ -56,7 +56,7 @@ class EquationCheckerTest {
             z3Scripts.add(script);
             return "sat\n";
         });
-        EquationChecker checker = new EquationChecker(new StructureChecker(SYMBOLS), numeric, smt);
+        EquationChecker checker = new EquationChecker(new StructureChecker(SYMBOLS), numeric, smt, PROJECTOR);
         CheckRecordFile checked = checker.check(fixture(), Set.of("x"));
 
         assertEquals(1, maximaScripts.size());
@@ -75,7 +75,8 @@ class EquationCheckerTest {
         assertEquals(":ok", records.get(1).status());
         assertEquals(":not-checkable", SexpWriter.writeFlat(records.get(1).checks().get(":smt")));
         assertEquals(":not-checkable", records.get(2).status());
-        assertTrue(records.get(0).source().startsWith("(relation1:eq"));
+        assertTrue(records.get(0).term().startsWith("(relation1:eq"));
+        assertTrue(records.get(0).latex().contains("^{2}"), records.get(0).latex());
     }
 
     @Test
@@ -87,7 +88,7 @@ class EquationCheckerTest {
             throw new AssertionError("z3 must not run");
         });
         Map<String, Term> equations = Map.of("d-eq1", term("(relation1:eq a (arith1:divide b))"));
-        CheckRecordFile checked = new EquationChecker(new StructureChecker(SYMBOLS), numeric, smt).check(equations, Set.of());
+        CheckRecordFile checked = new EquationChecker(new StructureChecker(SYMBOLS), numeric, smt, PROJECTOR).check(equations, Set.of());
         assertEquals(":suspect", checked.records().get(0).status());
         assertTrue(SexpWriter.writeFlat(checked.records().get(0).checks().get(":binders")).contains("arith1:divide expects 2"));
     }
@@ -102,7 +103,7 @@ class EquationCheckerTest {
         });
         Map<String, Term> equations = Map.of("d-eq1",
                 term("(relation1:eq (arith1:times m (calculus1:nthdiff 2 (fns1:lambda (t) x))) 0)"));
-        CheckRecordFile checked = new EquationChecker(new StructureChecker(SYMBOLS), numeric, smt).check(equations, Set.of());
+        CheckRecordFile checked = new EquationChecker(new StructureChecker(SYMBOLS), numeric, smt, PROJECTOR).check(equations, Set.of());
         assertEquals(":not-checkable", checked.records().get(0).status());
         assertTrue(SexpWriter.writeFlat(checked.records().get(0).checks().get(":binders")).startsWith("(:not-checkable"));
     }

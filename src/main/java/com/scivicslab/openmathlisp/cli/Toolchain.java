@@ -37,7 +37,7 @@ public final class Toolchain {
             return ExternalProcess.isAvailable("z3")
                     ? ExternalProcess.run(List.of("z3", "-in", "-t:5000"), script, Z3_TIMEOUT_SECONDS) : null;
         });
-        this.checker = new EquationChecker(new StructureChecker(symbols), numeric, smt);
+        this.checker = new EquationChecker(new StructureChecker(symbols), numeric, smt, projector);
     }
 
     /** Writes the script to the directory named by OPENMATH_LISP_DUMP_SCRIPTS, when that variable is set. */

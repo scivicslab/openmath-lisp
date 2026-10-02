@@ -44,7 +44,7 @@ public final class MarkdownDocument {
             "(?m)^<!--[ \\t]*om:unreadable[ \\t]+id=(\\S+)[ \\t]+reason=(\\S+)[ \\t]*-->[ \\t]*\\n?");
     private static final Pattern ID_IN_INFO = Pattern.compile("\\bid=(\\S+)");
     private static final Pattern TAG_IN_INFO = Pattern.compile("\\btag=(\\S+)");
-    private static final Pattern INLINE_VARIABLE = Pattern.compile("[A-Za-z][A-Za-z0-9_^]*'*");
+    private static final Pattern UNIT_NUMBER_IN_ID = Pattern.compile("-eq(\\d+)(?:-\\d+)?$");
 
     private final List<MarkdownPiece> pieces;
     private final Declaration declaration;
@@ -125,6 +125,21 @@ public final class MarkdownDocument {
     }
 
     /**
+     * The number of the display unit an om block belongs to. A block whose identifier already carries one
+     * keeps it, so that a block the previous conversion split into two parts counts as the one unit it came
+     * from and the blocks after it are not renumbered.
+     */
+    private static int unitNumberOf(MarkdownPiece.OmBlock block, int previous) {
+        if (block.id().isPresent()) {
+            Matcher m = UNIT_NUMBER_IN_ID.matcher(block.id().get());
+            if (m.find()) {
+                return Integer.parseInt(m.group(1));
+            }
+        }
+        return previous + 1;
+    }
+
+    /**
      * Brings the terms already stored in om blocks into line with the file's declaration: every bare
      * occurrence of a quantity the declaration calls a function becomes an application to the variables it
      * depends on.
@@ -161,12 +176,20 @@ public final class MarkdownDocument {
         return new ConversionResult(new MarkdownDocument(result, declaration), changed, 0, 0);
     }
 
-    /** Replaces a declared quantity by its application, except where it is a binder's own variable. */
     private static Term applyFunctions(Term term, Map<String, List<String>> functions) {
+        return applyFunctions(term, functions, java.util.Set.of());
+    }
+
+    /**
+     * Replaces a declared quantity by its application. A variable a binder binds stays bare: inside
+     * {@code \int f(x)\,dx} the letter {@code x} is the integration variable even in a document that calls
+     * {@code x} a function of {@code t}.
+     */
+    private static Term applyFunctions(Term term, Map<String, List<String>> functions, java.util.Set<String> bound) {
         switch (term) {
             case Term.VariableTerm variable -> {
                 List<String> arguments = functions.get(variable.name());
-                if (arguments == null) {
+                if (arguments == null || bound.contains(variable.name())) {
                     return variable;
                 }
                 List<Term> args = new ArrayList<>();
@@ -178,15 +201,19 @@ public final class MarkdownDocument {
             case Term.ApplicationTerm application -> {
                 List<Term> args = new ArrayList<>();
                 for (Term argument : application.args()) {
-                    args.add(applyFunctions(argument, functions));
+                    args.add(applyFunctions(argument, functions, bound));
                 }
                 Term head = application.head() instanceof Term.VariableTerm
-                        ? application.head() : applyFunctions(application.head(), functions);
+                        ? application.head() : applyFunctions(application.head(), functions, bound);
                 return new Term.ApplicationTerm(head, args);
             }
             case Term.BindingTerm binding -> {
+                java.util.Set<String> inner = new java.util.LinkedHashSet<>(bound);
+                for (Term.VariableTerm variable : binding.variables()) {
+                    inner.add(variable.name());
+                }
                 return new Term.BindingTerm(binding.binder(), binding.variables(),
-                        applyFunctions(binding.body(), functions));
+                        applyFunctions(binding.body(), functions, inner));
             }
             default -> {
                 return term;
@@ -286,8 +313,21 @@ public final class MarkdownDocument {
      * @param blocks how many display formulas became om blocks
      * @param spans how many inline formulas became om spans
      * @param unreadable how many display formulas stayed LaTeX with a marker
+     * @param replacedLatex formula identifier to the LaTeX this run replaced, for the source record
      */
-    public record ConversionResult(MarkdownDocument document, int blocks, int spans, int unreadable) {
+    public record ConversionResult(MarkdownDocument document, int blocks, int spans, int unreadable,
+                                   Map<String, String> replacedLatex) {
+        /**
+         * Creates a result with no LaTeX replaced.
+         * @param document the document
+         * @param blocks how many display formulas became om blocks
+         * @param spans how many inline formulas became om spans
+         * @param unreadable how many display formulas stayed LaTeX
+         */
+        public ConversionResult(MarkdownDocument document, int blocks, int spans, int unreadable) {
+            this(document, blocks, spans, unreadable, Map.of());
+        }
+
         /** @return the formulas written as formula source, display and inline together */
         public int converted() {
             return blocks + spans;
@@ -308,10 +348,11 @@ public final class MarkdownDocument {
         int blocks = 0;
         int spans = 0;
         int unreadable = 0;
+        Map<String, String> replaced = new LinkedHashMap<>();
         for (int i = 0; i < pieces.size(); i++) {
             MarkdownPiece piece = pieces.get(i);
             if (piece instanceof MarkdownPiece.OmBlock block && !block.isDeclaration()) {
-                unitNumber++;
+                unitNumber = unitNumberOf(block, unitNumber);
                 result.add(piece);
                 continue;
             }
@@ -354,10 +395,11 @@ public final class MarkdownDocument {
             for (int k = 0; k < equations.size(); k++) {
                 String partId = equations.size() > 1 ? id + "-" + (k + 1) : id;
                 result.add(blockFor(partId, read.tag(), equations.get(k).term().get()));
+                replaced.put(partId, equations.get(k).source());
                 blocks++;
             }
         }
-        return new ConversionResult(new MarkdownDocument(result, declaration), blocks, spans, unreadable);
+        return new ConversionResult(new MarkdownDocument(result, declaration), blocks, spans, unreadable, replaced);
     }
 
     private static MarkdownPiece.OmBlock blockFor(String id, Optional<String> tag, Term term) {
@@ -430,7 +472,7 @@ public final class MarkdownDocument {
         int unitNumber = 0;
         for (MarkdownPiece piece : pieces) {
             if (piece instanceof MarkdownPiece.OmBlock block && !block.isDeclaration()) {
-                unitNumber++;
+                unitNumber = unitNumberOf(block, unitNumber);
                 result.put(block.id().orElse(idPrefix + "-eq" + unitNumber), block.term().get());
             }
         }

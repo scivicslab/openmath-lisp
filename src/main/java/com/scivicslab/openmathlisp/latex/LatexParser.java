@@ -395,6 +395,63 @@ public final class LatexParser {
         }
     }
 
+    /** True while reading a variable that a derivative, integral or sum binds. */
+    private boolean readingBoundVariable;
+
+    /**
+     * Undoes the function declaration inside a body for the variable the construct binds.
+     *
+     * <p>The body of {@code \int f(x) \, dx} is read before the {@code dx} says what the integral binds,
+     * so a document that calls {@code x} a function of {@code t} has already turned the body's {@code x}
+     * into {@code (x t)}. Inside the integral that letter is the integration variable, so the application
+     * is undone once the bound variable is known.</p>
+     *
+     * @param body the body as read
+     * @param boundName the variable the construct binds
+     * @return the body with that variable bare again
+     */
+    private static Term unapplyBound(Term body, String boundName) {
+        switch (body) {
+            case Term.ApplicationTerm application -> {
+                if (application.head() instanceof Term.VariableTerm head && head.name().equals(boundName)) {
+                    return head;
+                }
+                List<Term> args = new ArrayList<>();
+                for (Term arg : application.args()) {
+                    args.add(unapplyBound(arg, boundName));
+                }
+                return new Term.ApplicationTerm(application.head(), args);
+            }
+            case Term.BindingTerm binding -> {
+                for (Term.VariableTerm variable : binding.variables()) {
+                    if (variable.name().equals(boundName)) {
+                        return binding;
+                    }
+                }
+                return new Term.BindingTerm(binding.binder(), binding.variables(),
+                        unapplyBound(binding.body(), boundName));
+            }
+            default -> {
+                return body;
+            }
+        }
+    }
+
+    /**
+     * Reads a variable that a derivative, integral or sum binds. The declaration's {@code :functions} is
+     * not applied here: in {@code \frac{d}{dx}} the letter {@code x} is the variable differentiated by,
+     * even in a document that calls {@code x} a function of {@code t}.
+     */
+    private Term parseBoundVariable(int position) {
+        boolean outer = readingBoundVariable;
+        readingBoundVariable = true;
+        try {
+            return parseAtom(false);
+        } finally {
+            readingBoundVariable = outer;
+        }
+    }
+
     private Term variableWithSubscript(String base, int position) {
         String name = base;
         while (peek().isPunct("'")) {
@@ -412,7 +469,7 @@ public final class LatexParser {
         if (declaration.imaginary().isPresent() && name.equals(declaration.imaginary().get())) {
             return symbol("nums1:i");
         }
-        if (declaration.functions().containsKey(name)) {
+        if (!readingBoundVariable && declaration.functions().containsKey(name)) {
             return declaredFunctionApplication(name);
         }
         return variable(name);
@@ -515,7 +572,7 @@ public final class LatexParser {
                 return null;
             }
             boolean dotted = peek().isCommand("dot") || peek().isCommand("ddot");
-            Term variable = parseAtom(false);
+            Term variable = parseBoundVariable(position);
             if (!(variable instanceof Term.VariableTerm variableTerm)) {
                 if (dotted) {
                     throw new LatexReadException("dot-as-variable", "derivative with respect to a dotted variable", position);
@@ -542,6 +599,9 @@ public final class LatexParser {
         if (body == null) {
             // \frac{d}{dt} expr : the operand follows the fraction
             body = parseFactor(false);
+        }
+        for (String name : variables) {
+            body = unapplyBound(body, name);
         }
         if (!partial) {
             if (variables.size() != 1 || degrees.get(0) != order) {
@@ -655,7 +715,7 @@ public final class LatexParser {
             }
         }
         Term.VariableTerm variable = variable(variableName);
-        Term.BindingTerm function = lambda(List.of(variable), body);
+        Term.BindingTerm function = lambda(List.of(variable), unapplyBound(body, variableName));
         if (lower == null && upper == null) {
             return apply("calculus1:int", List.of(function));
         }
@@ -706,7 +766,8 @@ public final class LatexParser {
         Term upper = parseGroupOrSingle();
         Term body = parseProduct(false);
         Term.VariableTerm variable = variable(variableToken.text());
-        return apply("arith1:sum", List.of(apply("interval1:integer_interval", List.of(lower, upper)), lambda(List.of(variable), body)));
+        return apply("arith1:sum", List.of(apply("interval1:integer_interval", List.of(lower, upper)),
+                lambda(List.of(variable), unapplyBound(body, variable.name()))));
     }
 
     private Term parseNabla() {

@@ -2,8 +2,11 @@ package com.scivicslab.openmathlisp.check;
 
 import com.scivicslab.openmathlisp.record.CheckRecordFile;
 import com.scivicslab.openmathlisp.record.EquationRecord;
+import com.scivicslab.openmathlisp.project.ProjectionException;
+import com.scivicslab.openmathlisp.project.Projector;
 import com.scivicslab.openmathlisp.sexp.SExp;
 import com.scivicslab.openmathlisp.sexp.SexpWriter;
+import com.scivicslab.openmathlisp.symbols.Target;
 import com.scivicslab.openmathlisp.term.Term;
 import com.scivicslab.openmathlisp.term.TermFactory;
 
@@ -22,17 +25,21 @@ public final class EquationChecker {
     private final StructureChecker structure;
     private final NumericChecker numeric;
     private final SmtChecker smt;
+    private final Projector projector;
 
     /**
      * Creates the checker.
      * @param structure the structural check
      * @param numeric the Maxima check
      * @param smt the Z3 check
+     * @param projector writes each formula's LaTeX into its record, so that the projection can be compared
+     *                  with what the OCR produced
      */
-    public EquationChecker(StructureChecker structure, NumericChecker numeric, SmtChecker smt) {
+    public EquationChecker(StructureChecker structure, NumericChecker numeric, SmtChecker smt, Projector projector) {
         this.structure = structure;
         this.numeric = numeric;
         this.smt = smt;
+        this.projector = projector;
     }
 
     /**
@@ -56,7 +63,8 @@ public final class EquationChecker {
         List<EquationRecord> records = new ArrayList<>();
         for (Map.Entry<String, Term> entry : equations.entrySet()) {
             String id = entry.getKey();
-            String source = SexpWriter.writeFlat(TermFactory.toSExp(entry.getValue()));
+            String term = SexpWriter.writeFlat(TermFactory.toSExp(entry.getValue()));
+            String latex = projectOrReason(entry.getValue());
             Map<String, SExp> checks = new LinkedHashMap<>();
             checks.put(":parse", keyword(":ok"));
             List<StructureChecker.Problem> problems = structureProblems.get(id);
@@ -67,7 +75,7 @@ public final class EquationChecker {
                         new SExp.SString(String.join("; ", messages)))));
                 checks.put(":numeric", keyword(":skipped"));
                 checks.put(":smt", keyword(":skipped"));
-                records.add(new EquationRecord(id, source, checks, arity ? ":suspect" : ":not-checkable"));
+                records.add(new EquationRecord(id, term, latex, checks, arity ? ":suspect" : ":not-checkable"));
                 continue;
             }
             checks.put(":binders", keyword(":ok"));
@@ -79,7 +87,7 @@ public final class EquationChecker {
                 case NumericChecker.NotCheckable notCheckable -> new SExp.SList(List.of(keyword(":not-checkable"), new SExp.SString(notCheckable.why())));
             });
             checks.put(":smt", keyword(smtResult));
-            records.add(new EquationRecord(id, source, checks, status(numericResult, smtResult)));
+            records.add(new EquationRecord(id, term, latex, checks, status(numericResult, smtResult)));
         }
         return new CheckRecordFile(records);
     }
@@ -98,6 +106,15 @@ public final class EquationChecker {
             return ":ok";
         }
         return ":not-checkable";
+    }
+
+    /** The formula's LaTeX, or the reason the projector could not write it. */
+    private String projectOrReason(Term term) {
+        try {
+            return projector.project(term, Target.LATEX);
+        } catch (ProjectionException e) {
+            return "(" + e.getMessage() + ")";
+        }
     }
 
     private static SExp.SSymbol keyword(String name) {
