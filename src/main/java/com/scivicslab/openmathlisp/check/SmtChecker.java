@@ -1,9 +1,9 @@
 package com.scivicslab.openmathlisp.check;
 
-import com.scivicslab.openmathlisp.project.ProjectionException;
-import com.scivicslab.openmathlisp.project.Projector;
-import com.scivicslab.openmathlisp.project.VariableNames;
-import com.scivicslab.openmathlisp.symbols.Target;
+import com.scivicslab.openmathlisp.write.TermWriterException;
+import com.scivicslab.openmathlisp.write.TermWriter;
+import com.scivicslab.openmathlisp.write.VariableNames;
+import com.scivicslab.openmathlisp.symbols.InputFormat;
 import com.scivicslab.openmathlisp.term.Term;
 
 import java.util.ArrayList;
@@ -22,16 +22,16 @@ public final class SmtChecker {
     private static final Set<String> POLYNOMIAL_SYMBOLS = Set.of("relation1:eq", "arith1:plus", "arith1:minus",
             "arith1:unary_minus", "arith1:times", "arith1:divide", "arith1:power");
 
-    private final Projector projector;
+    private final TermWriter writer;
     private final Function<String, String> z3;
 
     /**
      * Creates the checker.
-     * @param projector the projector for the SMT target
+     * @param writer the writer for the SMT format
      * @param z3 runs Z3 on SMT-LIB text and returns its output (null when unavailable)
      */
-    public SmtChecker(Projector projector, Function<String, String> z3) {
-        this.projector = projector;
+    public SmtChecker(TermWriter writer, Function<String, String> z3) {
+        this.writer = writer;
         this.z3 = z3;
     }
 
@@ -61,18 +61,18 @@ public final class SmtChecker {
             try {
                 script.append("(push)\n");
                 for (String variable : NumericChecker.freeVariables(term)) {
-                    script.append("(declare-const ").append(VariableNames.render(variable, Target.SMT)).append(" Real)\n");
+                    script.append("(declare-const ").append(VariableNames.render(variable, InputFormat.SMT)).append(" Real)\n");
                 }
                 List<Term> denominators = new ArrayList<>();
                 collectDenominators(term, denominators);
                 for (Term denominator : denominators) {
-                    script.append("(assert (not (= ").append(projector.project(denominator, Target.SMT)).append(" 0)))\n");
+                    script.append("(assert (not (= ").append(writer.write(denominator, InputFormat.SMT)).append(" 0)))\n");
                 }
-                script.append("(assert (not (= ").append(projector.project(equation.args().get(0), Target.SMT)).append(' ')
-                        .append(projector.project(equation.args().get(1), Target.SMT)).append(")))\n(check-sat)\n(pop)\n");
+                script.append("(assert (not (= ").append(writer.write(equation.args().get(0), InputFormat.SMT)).append(' ')
+                        .append(writer.write(equation.args().get(1), InputFormat.SMT)).append(")))\n(check-sat)\n(pop)\n");
                 scripted.add(entry.getKey());
                 results.put(entry.getKey(), null);
-            } catch (ProjectionException e) {
+            } catch (TermWriterException e) {
                 results.put(entry.getKey(), ":not-checkable");
             }
         }

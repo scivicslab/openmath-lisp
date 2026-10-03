@@ -1,6 +1,6 @@
 package com.scivicslab.openmathlisp.cli;
 
-import com.scivicslab.openmathlisp.symbols.Target;
+import com.scivicslab.openmathlisp.symbols.InputFormat;
 import com.scivicslab.pluggablecli.CommandRepository;
 
 import org.apache.commons.cli.CommandLine;
@@ -17,7 +17,7 @@ import java.util.logging.Logger;
 
 /**
  * Entry point of the {@code openmath-lisp} command line tool.
- * Usage: {@code openmath-lisp <convert|check|report|suggest|render|project> [options] <files...>}.
+ * Usage: {@code openmath-lisp <convert|check|report|suggest|render|write> [options] <files...>}.
  */
 public final class Main {
 
@@ -57,12 +57,12 @@ public final class Main {
                 "Print markdown with every om block and om span replaced by LaTeX",
                 (CommandLine cl) -> run(() -> implementation.render(paths(cl),
                         cl.getOptionValue("output") == null ? null : Path.of(cl.getOptionValue("output")))));
-        Options projectOptions = new Options();
-        projectOptions.addOption(Option.builder("t").longOpt("target").hasArg().argName("latex|maxima|smt")
-                .desc("projection target (default latex)").build());
-        commands.addCommand("Display", "project", projectOptions,
-                "Print every formula of markdown files for one target",
-                (CommandLine cl) -> run(() -> implementation.project(Target.fromName(cl.getOptionValue("target", "latex")), paths(cl))));
+        Options writeOptions = new Options();
+        writeOptions.addOption(Option.builder("t").longOpt("format").hasArg().argName("latex|maxima|smt")
+                .desc("input format to write (default latex)").build());
+        commands.addCommand("Display", "write", writeOptions,
+                "Print every formula of markdown files for one format",
+                (CommandLine cl) -> run(() -> implementation.write(InputFormat.fromName(cl.getOptionValue("format", "latex")), paths(cl))));
 
         if (args.length == 0) {
             commands.printCommandList("openmath-lisp <command> [options] <markdown files...>");

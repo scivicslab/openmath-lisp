@@ -3,7 +3,7 @@ package com.scivicslab.openmathlisp.check;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.scivicslab.openmathlisp.project.Projector;
+import com.scivicslab.openmathlisp.write.TermWriter;
 import com.scivicslab.openmathlisp.record.CheckRecordFile;
 import com.scivicslab.openmathlisp.record.EquationRecord;
 import com.scivicslab.openmathlisp.sexp.SexpReader;
@@ -30,7 +30,7 @@ class EquationCheckerTest {
 
     private static final SymbolTable SYMBOLS = SymbolTable.loadBundled();
     private static final TermFactory FACTORY = new TermFactory(SYMBOLS);
-    private static final Projector PROJECTOR = new Projector(SYMBOLS);
+    private static final TermWriter WRITER = new TermWriter(SYMBOLS);
 
     private static Term term(String text) {
         return FACTORY.fromSExp(SexpReader.readOne(text));
@@ -48,15 +48,15 @@ class EquationCheckerTest {
     void check_scriptsAndStatuses_fromStandInOutputs() {
         List<String> maximaScripts = new ArrayList<>();
         List<String> z3Scripts = new ArrayList<>();
-        NumericChecker numeric = new NumericChecker(PROJECTOR, (String script) -> {
+        NumericChecker numeric = new NumericChecker(WRITER, (String script) -> {
             maximaScripts.add(script);
             return "### d-eq1\n21.0\n6.0\n12.0\na*b\n### d-eq2\n0.0\n0.0\n0.0\n0\n### d-eq3\ny-'diff(x(t),t,1)\n";
         });
-        SmtChecker smt = new SmtChecker(PROJECTOR, (String script) -> {
+        SmtChecker smt = new SmtChecker(WRITER, (String script) -> {
             z3Scripts.add(script);
             return "sat\n";
         });
-        EquationChecker checker = new EquationChecker(new StructureChecker(SYMBOLS), numeric, smt, PROJECTOR);
+        EquationChecker checker = new EquationChecker(new StructureChecker(SYMBOLS), numeric, smt, WRITER);
         CheckRecordFile checked = checker.check(fixture(), Set.of("x"));
 
         assertEquals(1, maximaScripts.size());
@@ -81,36 +81,36 @@ class EquationCheckerTest {
 
     @Test
     void check_structuralProblem_suspectWithoutRunningMaxima() {
-        NumericChecker numeric = new NumericChecker(PROJECTOR, (String script) -> {
+        NumericChecker numeric = new NumericChecker(WRITER, (String script) -> {
             throw new AssertionError("maxima must not run");
         });
-        SmtChecker smt = new SmtChecker(PROJECTOR, (String script) -> {
+        SmtChecker smt = new SmtChecker(WRITER, (String script) -> {
             throw new AssertionError("z3 must not run");
         });
         Map<String, Term> equations = Map.of("d-eq1", term("(relation1:eq a (arith1:divide b))"));
-        CheckRecordFile checked = new EquationChecker(new StructureChecker(SYMBOLS), numeric, smt, PROJECTOR).check(equations, Set.of());
+        CheckRecordFile checked = new EquationChecker(new StructureChecker(SYMBOLS), numeric, smt, WRITER).check(equations, Set.of());
         assertEquals(":suspect", checked.records().get(0).status());
         assertTrue(SexpWriter.writeFlat(checked.records().get(0).checks().get(":binders")).contains("arith1:divide expects 2"));
     }
 
     @Test
     void check_undeclaredDependence_notCheckableNotSuspect() {
-        NumericChecker numeric = new NumericChecker(PROJECTOR, (String script) -> {
+        NumericChecker numeric = new NumericChecker(WRITER, (String script) -> {
             throw new AssertionError("maxima must not run");
         });
-        SmtChecker smt = new SmtChecker(PROJECTOR, (String script) -> {
+        SmtChecker smt = new SmtChecker(WRITER, (String script) -> {
             throw new AssertionError("z3 must not run");
         });
         Map<String, Term> equations = Map.of("d-eq1",
                 term("(relation1:eq (arith1:times m (calculus1:nthdiff 2 (fns1:lambda (t) x))) 0)"));
-        CheckRecordFile checked = new EquationChecker(new StructureChecker(SYMBOLS), numeric, smt, PROJECTOR).check(equations, Set.of());
+        CheckRecordFile checked = new EquationChecker(new StructureChecker(SYMBOLS), numeric, smt, WRITER).check(equations, Set.of());
         assertEquals(":not-checkable", checked.records().get(0).status());
         assertTrue(SexpWriter.writeFlat(checked.records().get(0).checks().get(":binders")).startsWith("(:not-checkable"));
     }
 
     @Test
     void numericCheck_variableOnOneSideOnly_notCheckableWithoutMaxima() {
-        NumericChecker numeric = new NumericChecker(PROJECTOR, (String script) -> {
+        NumericChecker numeric = new NumericChecker(WRITER, (String script) -> {
             throw new AssertionError("maxima must not run for a definition");
         });
         Map<String, Term> equations = new LinkedHashMap<>();
@@ -123,7 +123,7 @@ class EquationCheckerTest {
 
     @Test
     void numericCheck_constantSide_notCheckable() {
-        NumericChecker numeric = new NumericChecker(PROJECTOR, (String script) -> {
+        NumericChecker numeric = new NumericChecker(WRITER, (String script) -> {
             throw new AssertionError("maxima must not run for a condition");
         });
         Map<String, Term> equations = Map.of("cond", term("(relation1:eq (arith1:plus A_1 (arith1:times k A_0)) 0)"));
@@ -143,7 +143,7 @@ class EquationCheckerTest {
     @Test
     void numericCheck_sameId_sameSubstitutionsEveryRun() {
         List<String> scripts = new ArrayList<>();
-        NumericChecker numeric = new NumericChecker(PROJECTOR, (String script) -> {
+        NumericChecker numeric = new NumericChecker(WRITER, (String script) -> {
             scripts.add(script);
             return "";
         });

@@ -1,11 +1,11 @@
-package com.scivicslab.openmathlisp.project;
+package com.scivicslab.openmathlisp.write;
 
-import com.scivicslab.openmathlisp.symbols.Target;
+import com.scivicslab.openmathlisp.symbols.InputFormat;
 
 import java.util.Set;
 
 /**
- * Renders variable names per target. In a name, {@code _} and {@code ^} introduce subscript and
+ * Renders variable names per format. In a name, {@code _} and {@code ^} introduce subscript and
  * superscript labels and a trailing {@code '} is a prime (TermGrammarAndSymbolTable_261002_oo01, decision 2).
  * Greek letters are spelled by their LaTeX command name without the backslash.
  */
@@ -24,11 +24,11 @@ public final class VariableNames {
     /**
      * Renders a variable name.
      * @param name the name as written in the term
-     * @param target the target
+     * @param format the format
      * @return the text
      */
-    public static String render(String name, Target target) {
-        return switch (target) {
+    public static String render(String name, InputFormat format) {
+        return switch (format) {
             case LATEX -> renderLatex(name);
             case MAXIMA, SMT -> renderIdentifier(name);
         };

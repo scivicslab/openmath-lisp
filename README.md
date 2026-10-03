@@ -1,7 +1,7 @@
 # openmath-lisp
 
-Stores formulas as s-expressions whose heads are OpenMath Content Dictionary symbols, projects
-them to LaTeX, Maxima and SMT-LIB with one projector driven by a symbol table, and checks
+Stores formulas as s-expressions whose heads are OpenMath Content Dictionary symbols, writes
+them out as LaTeX, Maxima input and SMT-LIB input with one writer driven by a symbol table, and checks
 equations extracted from OCR'd books with Maxima (numeric substitution) and Z3 (polynomial identities).
 
 ```lisp
@@ -10,7 +10,7 @@ equations extracted from OCR'd books with Maxima (numeric substitution) and Z3 (
   (arith1:plus (arith1:power a 2) (arith1:times a b) (arith1:power b 2)))
 ```
 
-projects to
+is written out as
 
 ```
 LaTeX   : {\left(a + b\right)}^{2} = {a}^{2} + a b + {b}^{2}
@@ -50,7 +50,7 @@ bin/openmath-lisp suggest path/to/X.md      # propose the declaration the docume
 bin/openmath-lisp check   path/to/X.md      # structural, Maxima and Z3 checks; writes X.lisp
 bin/openmath-lisp report  path/to/*/*.md    # counts per status, unreadable reasons, suspects
 bin/openmath-lisp render  path/to/X.md      # om -> LaTeX markdown, for KaTeX
-bin/openmath-lisp project --target maxima path/to/X.md
+bin/openmath-lisp write --format maxima path/to/X.md
 ```
 
 
@@ -69,7 +69,7 @@ Write it and run `convert` again; it converts only what is still LaTeX.
 ```
 ````
 
-`check` writes one record per formula into `X.lisp` with the term, the LaTeX projected from it, the
+`check` writes one record per formula into `X.lisp` with the term, the LaTeX written from it, the
 four check results and a status: `:ok`, `:suspect`, `:not-checkable` or `:unparseable`. Everything in
 it comes from the term, so `X.lisp` can be deleted and produced again.
 
@@ -80,7 +80,7 @@ When a formula is suspect, the fault is in one of four places, and each has a re
 | the page | the PDF |
 | the OCR reading of it | `X.ocr.lisp`, written by `convert` and kept in version control |
 | the term the LaTeX reader built | the om block in `X.md` |
-| the LaTeX projected back from the term | `X.lisp` |
+| the LaTeX written back from the term | `X.lisp` |
 
 `report` prints all three of the files' forms for each suspect formula. To correct a formula, edit
 its om block in the markdown and run `check` again.
@@ -90,7 +90,7 @@ its om block in the markdown and run `check` again.
 `src/main/resources/openmath/symbols.lisp` holds the 113 symbols of 15 OpenMath dictionaries
 (arith1, relation1, transc1, calculus1, fns1, veccalc1, nums1, minmax1, integer1, complex1,
 limit1, linalg1, linalg2, interval1, list1). Role and arity come from the official `.ocd` and
-`.sts` files; the three projection rules per symbol are written in
+`.sts` files; the three writing rules per symbol are written in
 `bin/generate-symbol-table.py`, which regenerates the file. The unit tests verify the table
 against the dictionary files.
 

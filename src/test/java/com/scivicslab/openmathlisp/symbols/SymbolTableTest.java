@@ -86,7 +86,7 @@ class SymbolTableTest {
     @Test
     void loadBundled_everyRow_hasLatexRule() {
         for (SymbolEntry entry : SymbolTable.loadBundled().entries()) {
-            assertTrue(entry.rule(Target.LATEX).isPresent(), entry.qualifiedName());
+            assertTrue(entry.rule(InputFormat.LATEX).isPresent(), entry.qualifiedName());
         }
     }
 

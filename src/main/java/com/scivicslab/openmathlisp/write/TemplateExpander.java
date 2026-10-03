@@ -1,6 +1,6 @@
-package com.scivicslab.openmathlisp.project;
+package com.scivicslab.openmathlisp.write;
 
-import com.scivicslab.openmathlisp.symbols.Target;
+import com.scivicslab.openmathlisp.symbols.InputFormat;
 import com.scivicslab.openmathlisp.term.Term;
 
 import java.util.ArrayList;
@@ -17,8 +17,8 @@ final class TemplateExpander {
     private TemplateExpander() {
     }
 
-    static String expand(String template, List<Term> args, Term.BindingTerm binding, Projector projector,
-                         Target target, Integer priority) {
+    static String expand(String template, List<Term> args, Term.BindingTerm binding, TermWriter writer,
+                         InputFormat format, Integer priority) {
         Matcher matcher = PLACEHOLDER.matcher(template);
         StringBuilder out = new StringBuilder();
         while (matcher.find()) {
@@ -27,33 +27,33 @@ final class TemplateExpander {
                 String separator = matcher.group(2) == null ? ", " : matcher.group(2);
                 List<String> parts = new ArrayList<>();
                 for (Term arg : args) {
-                    parts.add(projectChild(arg, projector, target, priority));
+                    parts.add(writeChild(arg, writer, format, priority));
                 }
                 replacement = String.join(separator, parts);
             } else if (matcher.group(1).equals("v")) {
-                replacement = joinVariables(requireBinding(binding, template), target);
+                replacement = joinVariables(requireBinding(binding, template), format);
             } else if (matcher.group(1).equals("b")) {
-                replacement = projectChild(requireBinding(binding, template).body(), projector, target, priority);
+                replacement = writeChild(requireBinding(binding, template).body(), writer, format, priority);
             } else {
                 int index = Integer.parseInt(matcher.group(3)) - 1;
                 if (index >= args.size()) {
-                    throw new ProjectionException("template needs argument " + (index + 1) + " but only " + args.size() + " given: " + template);
+                    throw new TermWriterException("template needs argument " + (index + 1) + " but only " + args.size() + " given: " + template);
                 }
                 Term arg = args.get(index);
                 String part = matcher.group(4);
                 if (part == null) {
-                    replacement = projectChild(arg, projector, target, priority);
+                    replacement = writeChild(arg, writer, format, priority);
                 } else if (part.equals("b")) {
-                    replacement = projectChild(asBinding(arg, template).body(), projector, target, priority);
+                    replacement = writeChild(asBinding(arg, template).body(), writer, format, priority);
                 } else if (part.startsWith("v")) {
                     int variableIndex = Integer.parseInt(part.substring(1)) - 1;
-                    replacement = projector.project(asBinding(arg, template).variables().get(variableIndex), target);
+                    replacement = writer.write(asBinding(arg, template).variables().get(variableIndex), format);
                 } else {
                     int elementIndex = Integer.parseInt(part) - 1;
                     if (!(arg instanceof Term.ApplicationTerm application) || elementIndex >= application.args().size()) {
-                        throw new ProjectionException("template asks for element " + part + " of a non-application argument: " + template);
+                        throw new TermWriterException("template asks for element " + part + " of a non-application argument: " + template);
                     }
-                    replacement = projectChild(application.args().get(elementIndex), projector, target, priority);
+                    replacement = writeChild(application.args().get(elementIndex), writer, format, priority);
                 }
             }
             matcher.appendReplacement(out, Matcher.quoteReplacement(replacement));
@@ -62,32 +62,32 @@ final class TemplateExpander {
         return out.toString();
     }
 
-    private static String projectChild(Term child, Projector projector, Target target, Integer priority) {
-        Projector.Projected projected = projector.projectWithPriority(child, target);
+    private static String writeChild(Term child, TermWriter writer, InputFormat format, Integer priority) {
+        TermWriter.Written written = writer.writeWithPriority(child, format);
         if (priority == null) {
-            return projected.text();
+            return written.text();
         }
-        return projector.parenthesize(projected, priority, target);
+        return writer.parenthesize(written, priority, format);
     }
 
     private static Term.BindingTerm requireBinding(Term.BindingTerm binding, String template) {
         if (binding == null) {
-            throw new ProjectionException("template uses ~v or ~b but the symbol is not a binder: " + template);
+            throw new TermWriterException("template uses ~v or ~b but the symbol is not a binder: " + template);
         }
         return binding;
     }
 
     private static Term.BindingTerm asBinding(Term arg, String template) {
         if (!(arg instanceof Term.BindingTerm binding)) {
-            throw new ProjectionException("template expects a binding argument: " + template);
+            throw new TermWriterException("template expects a binding argument: " + template);
         }
         return binding;
     }
 
-    static String joinVariables(Term.BindingTerm binding, Target target) {
+    static String joinVariables(Term.BindingTerm binding, InputFormat format) {
         List<String> names = new ArrayList<>();
         for (Term.VariableTerm variable : binding.variables()) {
-            names.add(VariableNames.render(variable.name(), target));
+            names.add(VariableNames.render(variable.name(), format));
         }
         return String.join(", ", names);
     }

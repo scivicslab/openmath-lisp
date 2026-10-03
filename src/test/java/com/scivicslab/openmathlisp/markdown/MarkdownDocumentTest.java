@@ -3,7 +3,7 @@ package com.scivicslab.openmathlisp.markdown;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.scivicslab.openmathlisp.project.Projector;
+import com.scivicslab.openmathlisp.write.TermWriter;
 import com.scivicslab.openmathlisp.symbols.SymbolTable;
 import com.scivicslab.openmathlisp.term.TermFactory;
 
@@ -26,7 +26,7 @@ class MarkdownDocumentTest {
 
     private static final SymbolTable SYMBOLS = SymbolTable.loadBundled();
     private static final TermFactory FACTORY = new TermFactory(SYMBOLS);
-    private static final Projector PROJECTOR = new Projector(SYMBOLS);
+    private static final TermWriter WRITER = new TermWriter(SYMBOLS);
 
     private static final String PHYSICS_DECLARATION = "```om\n(declare :time t :euler e :imaginary i :functions ((x t) (f t)))\n```\n";
 
@@ -141,7 +141,7 @@ class MarkdownDocumentTest {
     @Test
     void render_omBlockAndSpan_becomeLatexAndDeclarationDisappears() {
         String text = PHYSICS_DECLARATION + "\n角振動数 `om:omega_n` は\n\n```om id=d-eq1\n(relation1:eq a (arith1:divide b c))\n```\n";
-        String rendered = MarkdownDocument.parse(text, FACTORY).render(PROJECTOR);
+        String rendered = MarkdownDocument.parse(text, FACTORY).render(WRITER);
         assertTrue(!rendered.contains("declare"), rendered);
         assertTrue(rendered.contains("$\\omega_{n}$"), rendered);
         assertTrue(rendered.contains("$$\na = \\frac{b}{c}\n$$"), rendered);

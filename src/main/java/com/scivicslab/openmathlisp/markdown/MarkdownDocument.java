@@ -3,14 +3,14 @@ package com.scivicslab.openmathlisp.markdown;
 import com.scivicslab.openmathlisp.latex.LatexBlockReader;
 import com.scivicslab.openmathlisp.latex.LatexParser;
 import com.scivicslab.openmathlisp.latex.LatexReadException;
-import com.scivicslab.openmathlisp.project.ProjectionException;
-import com.scivicslab.openmathlisp.project.Projector;
+import com.scivicslab.openmathlisp.write.TermWriterException;
+import com.scivicslab.openmathlisp.write.TermWriter;
 import com.scivicslab.openmathlisp.record.Declaration;
 import com.scivicslab.openmathlisp.sexp.SExp;
 import com.scivicslab.openmathlisp.sexp.SexpReader;
 import com.scivicslab.openmathlisp.sexp.SexpSyntaxException;
 import com.scivicslab.openmathlisp.sexp.SexpWriter;
-import com.scivicslab.openmathlisp.symbols.Target;
+import com.scivicslab.openmathlisp.symbols.InputFormat;
 import com.scivicslab.openmathlisp.term.Term;
 import com.scivicslab.openmathlisp.term.TermFactory;
 import com.scivicslab.openmathlisp.term.TermFormatException;
@@ -464,12 +464,12 @@ public final class MarkdownDocument {
     }
 
     /**
-     * Writes the file with every om block and om span replaced by the LaTeX the projector produces, so that
+     * Writes the file with every om block and om span replaced by the LaTeX the writer produces, so that
      * KaTeX can draw it. The declaration block is removed. Nothing else changes.
-     * @param projector the projector
+     * @param writer the writer
      * @return the markdown text for display
      */
-    public String render(Projector projector) {
+    public String render(TermWriter writer) {
         StringBuilder out = new StringBuilder();
         for (MarkdownPiece piece : pieces) {
             switch (piece) {
@@ -477,20 +477,20 @@ public final class MarkdownDocument {
                     if (block.isDeclaration()) {
                         continue;
                     }
-                    out.append("$$\n").append(projectOrSource(block.term().get(), block.source(), projector)).append("\n$$\n");
+                    out.append("$$\n").append(writeOrSource(block.term().get(), block.source(), writer)).append("\n$$\n");
                 }
                 case MarkdownPiece.OmSpan span ->
-                        out.append('$').append(projectOrSource(span.term(), span.source(), projector)).append('$');
+                        out.append('$').append(writeOrSource(span.term(), span.source(), writer)).append('$');
                 default -> out.append(piece.raw());
             }
         }
         return out.toString();
     }
 
-    private static String projectOrSource(Term term, String source, Projector projector) {
+    private static String writeOrSource(Term term, String source, TermWriter writer) {
         try {
-            return projector.project(term, Target.LATEX);
-        } catch (ProjectionException e) {
+            return writer.write(term, InputFormat.LATEX);
+        } catch (TermWriterException e) {
             return "\\text{" + source.replace("\n", " ") + "}";
         }
     }

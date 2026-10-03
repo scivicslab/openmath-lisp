@@ -26,7 +26,7 @@ public sealed interface Term permits Term.SymbolTerm, Term.VariableTerm, Term.In
     record IntegerTerm(BigInteger value) implements Term {
     }
 
-    /** A decimal number; the literal text is kept so that projection reproduces it. */
+    /** A decimal number; the literal text is kept so that writing it out reproduces it. */
     record DecimalTerm(String literal) implements Term {
     }
 

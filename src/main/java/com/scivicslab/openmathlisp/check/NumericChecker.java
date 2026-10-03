@@ -1,9 +1,9 @@
 package com.scivicslab.openmathlisp.check;
 
-import com.scivicslab.openmathlisp.project.ProjectionException;
-import com.scivicslab.openmathlisp.project.Projector;
-import com.scivicslab.openmathlisp.project.VariableNames;
-import com.scivicslab.openmathlisp.symbols.Target;
+import com.scivicslab.openmathlisp.write.TermWriterException;
+import com.scivicslab.openmathlisp.write.TermWriter;
+import com.scivicslab.openmathlisp.write.VariableNames;
+import com.scivicslab.openmathlisp.symbols.InputFormat;
 import com.scivicslab.openmathlisp.term.Term;
 
 import java.util.ArrayList;
@@ -44,16 +44,16 @@ public final class NumericChecker {
     private static final Pattern NUMBER = Pattern.compile("^-?[0-9]+(\\.[0-9]*)?([eE][+-]?[0-9]+)?$");
     private static final String MARKER = "### ";
 
-    private final Projector projector;
+    private final TermWriter writer;
     private final Function<String, String> maxima;
 
     /**
      * Creates the checker.
-     * @param projector the projector for the Maxima target
+     * @param writer the writer for the Maxima format
      * @param maxima runs a Maxima script and returns its output (null when Maxima is unavailable)
      */
-    public NumericChecker(Projector projector, Function<String, String> maxima) {
-        this.projector = projector;
+    public NumericChecker(TermWriter writer, Function<String, String> maxima) {
+        this.writer = writer;
         this.maxima = maxima;
     }
 
@@ -86,9 +86,9 @@ public final class NumericChecker {
             }
             String difference;
             try {
-                difference = "(" + projector.project(application.args().get(0), Target.MAXIMA) + ") - ("
-                        + projector.project(application.args().get(1), Target.MAXIMA) + ")";
-            } catch (ProjectionException e) {
+                difference = "(" + writer.write(application.args().get(0), InputFormat.MAXIMA) + ") - ("
+                        + writer.write(application.args().get(1), InputFormat.MAXIMA) + ")";
+            } catch (TermWriterException e) {
                 results.put(id, new NotCheckable(e.getMessage()));
                 continue;
             }
@@ -98,7 +98,7 @@ public final class NumericChecker {
             for (int sample = 0; sample < SAMPLES; sample++) {
                 StringBuilder substitution = new StringBuilder();
                 for (String variable : variables) {
-                    substitution.append(", ").append(VariableNames.render(variable, Target.MAXIMA)).append("=").append(2 + random.nextInt(8));
+                    substitution.append(", ").append(VariableNames.render(variable, InputFormat.MAXIMA)).append("=").append(2 + random.nextInt(8));
                 }
                 script.append("print(float(ev(").append(difference).append(substitution).append(")))$\n");
             }

@@ -3,7 +3,7 @@ package com.scivicslab.openmathlisp.e2e;
 import com.scivicslab.openmathlisp.check.ExternalProcess;
 import com.scivicslab.openmathlisp.check.NumericChecker;
 import com.scivicslab.openmathlisp.check.SmtChecker;
-import com.scivicslab.openmathlisp.project.Projector;
+import com.scivicslab.openmathlisp.write.TermWriter;
 import com.scivicslab.openmathlisp.sexp.SexpReader;
 import com.scivicslab.openmathlisp.symbols.SymbolTable;
 import com.scivicslab.openmathlisp.term.Term;
@@ -16,7 +16,7 @@ import java.util.Map;
 /**
  * End-to-end check against the installed Maxima and Z3 (ToolchainInstalled_261002_oo01). Not a JUnit test:
  * it needs the programs on the PATH. Run with
- * {@code java -cp target/classes:target/test-classes com.scivicslab.openmathlisp.e2e.ToolchainE2E}.
+ * {@code java -cp format/classes:format/test-classes com.scivicslab.openmathlisp.e2e.ToolchainE2E}.
  * Exit code 0 when the Concept's broken identity is reported suspect by both tools and the correct one is ok.
  */
 public final class ToolchainE2E {
@@ -31,10 +31,10 @@ public final class ToolchainE2E {
     public static void main(String[] args) {
         SymbolTable symbols = SymbolTable.loadBundled();
         TermFactory factory = new TermFactory(symbols);
-        Projector projector = new Projector(symbols);
-        NumericChecker numeric = new NumericChecker(projector, (String script) ->
+        TermWriter writer = new TermWriter(symbols);
+        NumericChecker numeric = new NumericChecker(writer, (String script) ->
                 ExternalProcess.run(List.of("maxima", "--very-quiet"), script, 120));
-        SmtChecker smt = new SmtChecker(projector, (String script) ->
+        SmtChecker smt = new SmtChecker(writer, (String script) ->
                 ExternalProcess.run(List.of("z3", "-in", "-t:5000"), script, 60));
         Map<String, Term> equations = new LinkedHashMap<>();
         equations.put("broken", factory.fromSExp(SexpReader.readOne(

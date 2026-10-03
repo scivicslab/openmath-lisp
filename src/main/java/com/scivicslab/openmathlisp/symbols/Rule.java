@@ -1,6 +1,6 @@
 package com.scivicslab.openmathlisp.symbols;
 
-/** A projection rule from a symbol table row. The five kinds follow TermGrammarAndSymbolTable_261002_oo01. */
+/** A writing rule from a symbol table row. The five kinds follow TermGrammarAndSymbolTable_261002_oo01. */
 public sealed interface Rule permits Rule.Infix, Rule.Prefix, Rule.Function, Rule.Template, Rule.Special {
 
     /** Associativity of an infix operator. */
@@ -19,7 +19,7 @@ public sealed interface Rule permits Rule.Infix, Rule.Prefix, Rule.Function, Rul
     }
 
     /**
-     * {@code (:template "text" [priority])}: {@code ~1}, {@code ~2}, {@code ~*} are replaced by projected
+     * {@code (:template "text" [priority])}: {@code ~1}, {@code ~2}, {@code ~*} are replaced by written
      * arguments, {@code ~1.2} by the second element of argument 1, {@code ~2.v1} by the first bound variable
      * of binding argument 2, {@code ~2.b} by its body, {@code ~v} / {@code ~b} by the binding's own variables
      * and body. {@code priority} is the binding strength of the result; {@code childPriority} is the strength
@@ -40,7 +40,7 @@ public sealed interface Rule permits Rule.Infix, Rule.Prefix, Rule.Function, Rul
         }
     }
 
-    /** {@code (:special "name")}: handled by a named procedure in the projector. */
+    /** {@code (:special "name")}: handled by a named procedure in the writer. */
     record Special(String name) implements Rule {
     }
 }

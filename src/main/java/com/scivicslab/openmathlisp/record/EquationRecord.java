@@ -9,12 +9,12 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * One check record: one formula of a markdown file as the term the om block holds, the LaTeX the projector
+ * One check record: one formula of a markdown file as the term the om block holds, the LaTeX the writer
  * writes from it, the results of the four checks and the status they give it.
  *
  * <p>Both the term and the LaTeX are copies: the term's original is the om block the identifier names, and
  * the LaTeX is produced from it on demand. They are written here so that a suspect formula can be read
- * without opening the markdown or rendering it, and so that the projection can be compared with what the
+ * without opening the markdown or rendering it, and so that the written LaTeX can be compared with what the
  * OCR produced ({@link SourceRecordFile}).</p>
  */
 public final class EquationRecord {
@@ -29,7 +29,7 @@ public final class EquationRecord {
      * Creates a record.
      * @param id the identifier of the om block
      * @param term the s-expression of that block on one line
-     * @param latex the LaTeX the projector writes from that term
+     * @param latex the LaTeX the writer writes from that term
      * @param checks check name (e.g. {@code :parse}) to result, in check order
      * @param status one of {@code :ok}, {@code :suspect}, {@code :unparseable}, {@code :not-checkable}
      */
@@ -100,7 +100,7 @@ public final class EquationRecord {
         return term;
     }
 
-    /** @return the LaTeX the projector writes from that term */
+    /** @return the LaTeX the writer writes from that term */
     public String latex() {
         return latex;
     }

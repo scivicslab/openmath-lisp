@@ -17,8 +17,8 @@ import java.util.Map;
  * conversion replaced it, one record per formula identifier.
  *
  * <p>When a check reports a formula as suspect, the fault is in one of four places: the page itself, the
- * OCR reading of it, the LaTeX reader that built the term, or the projection of the term back to LaTeX.
- * The page is in the PDF, the term is in the markdown, the projection is in the check record. This file
+ * OCR reading of it, the LaTeX reader that built the term, or the LaTeX written back from the term.
+ * The page is in the PDF, the term is in the markdown, the written LaTeX is in the check record. This file
  * holds the one remaining piece, which conversion would otherwise destroy: what the OCR produced.</p>
  *
  * <p>The records are therefore not derivable from anything still on disk and belong in version control,

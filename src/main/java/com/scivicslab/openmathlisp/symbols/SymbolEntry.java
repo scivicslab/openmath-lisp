@@ -8,9 +8,9 @@ import java.util.Optional;
  * @param qualifiedName {@code cd:name}
  * @param role the role from the content dictionary
  * @param arity the number of arguments, or {@link #NARY} for a variable number
- * @param rules the projection rule per target; a target absent from the map cannot express the symbol
+ * @param rules the writing rule per format; a format absent from the map cannot express the symbol
  */
-public record SymbolEntry(String qualifiedName, Role role, int arity, Map<Target, Rule> rules) {
+public record SymbolEntry(String qualifiedName, Role role, int arity, Map<InputFormat, Rule> rules) {
 
     /** Arity value meaning "any number of arguments". */
     public static final int NARY = -1;
@@ -20,19 +20,19 @@ public record SymbolEntry(String qualifiedName, Role role, int arity, Map<Target
      * @param qualifiedName {@code cd:name}
      * @param role the role
      * @param arity the arity or {@link #NARY}
-     * @param rules the rules per target
+     * @param rules the rules per format
      */
     public SymbolEntry {
         rules = Map.copyOf(rules);
     }
 
     /**
-     * Looks up the rule for a target.
-     * @param target the target
-     * @return the rule, or empty when the target cannot express this symbol
+     * Looks up the rule for a format.
+     * @param format the format
+     * @return the rule, or empty when the format cannot express this symbol
      */
-    public Optional<Rule> rule(Target target) {
-        return Optional.ofNullable(rules.get(target));
+    public Optional<Rule> rule(InputFormat format) {
+        return Optional.ofNullable(rules.get(format));
     }
 
     /** @return the dictionary part of the qualified name */

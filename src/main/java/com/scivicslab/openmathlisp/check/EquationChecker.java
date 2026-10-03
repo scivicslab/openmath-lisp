@@ -2,11 +2,11 @@ package com.scivicslab.openmathlisp.check;
 
 import com.scivicslab.openmathlisp.record.CheckRecordFile;
 import com.scivicslab.openmathlisp.record.EquationRecord;
-import com.scivicslab.openmathlisp.project.ProjectionException;
-import com.scivicslab.openmathlisp.project.Projector;
+import com.scivicslab.openmathlisp.write.TermWriterException;
+import com.scivicslab.openmathlisp.write.TermWriter;
 import com.scivicslab.openmathlisp.sexp.SExp;
 import com.scivicslab.openmathlisp.sexp.SexpWriter;
-import com.scivicslab.openmathlisp.symbols.Target;
+import com.scivicslab.openmathlisp.symbols.InputFormat;
 import com.scivicslab.openmathlisp.term.Term;
 import com.scivicslab.openmathlisp.term.TermFactory;
 
@@ -25,21 +25,21 @@ public final class EquationChecker {
     private final StructureChecker structure;
     private final NumericChecker numeric;
     private final SmtChecker smt;
-    private final Projector projector;
+    private final TermWriter writer;
 
     /**
      * Creates the checker.
      * @param structure the structural check
      * @param numeric the Maxima check
      * @param smt the Z3 check
-     * @param projector writes each formula's LaTeX into its record, so that the projection can be compared
+     * @param writer writes each formula's LaTeX into its record, so that the written LaTeX can be compared
      *                  with what the OCR produced
      */
-    public EquationChecker(StructureChecker structure, NumericChecker numeric, SmtChecker smt, Projector projector) {
+    public EquationChecker(StructureChecker structure, NumericChecker numeric, SmtChecker smt, TermWriter writer) {
         this.structure = structure;
         this.numeric = numeric;
         this.smt = smt;
-        this.projector = projector;
+        this.writer = writer;
     }
 
     /**
@@ -64,7 +64,7 @@ public final class EquationChecker {
         for (Map.Entry<String, Term> entry : equations.entrySet()) {
             String id = entry.getKey();
             String term = SexpWriter.writeFlat(TermFactory.toSExp(entry.getValue()));
-            String latex = projectOrReason(entry.getValue());
+            String latex = writeOrReason(entry.getValue());
             Map<String, SExp> checks = new LinkedHashMap<>();
             checks.put(":parse", keyword(":ok"));
             List<StructureChecker.Problem> problems = structureProblems.get(id);
@@ -108,11 +108,11 @@ public final class EquationChecker {
         return ":not-checkable";
     }
 
-    /** The formula's LaTeX, or the reason the projector could not write it. */
-    private String projectOrReason(Term term) {
+    /** The formula's LaTeX, or the reason the writer could not write it. */
+    private String writeOrReason(Term term) {
         try {
-            return projector.project(term, Target.LATEX);
-        } catch (ProjectionException e) {
+            return writer.write(term, InputFormat.LATEX);
+        } catch (TermWriterException e) {
             return "(" + e.getMessage() + ")";
         }
     }

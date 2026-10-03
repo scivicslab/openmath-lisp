@@ -4,14 +4,14 @@ import com.scivicslab.openmathlisp.markdown.DeclarationSuggester;
 import com.scivicslab.openmathlisp.markdown.DocumentIdentifier;
 import com.scivicslab.openmathlisp.markdown.MarkdownDocument;
 import com.scivicslab.openmathlisp.markdown.MarkdownPiece;
-import com.scivicslab.openmathlisp.project.ProjectionException;
+import com.scivicslab.openmathlisp.write.TermWriterException;
 import com.scivicslab.openmathlisp.record.CheckRecordFile;
 import com.scivicslab.openmathlisp.record.Declaration;
 import com.scivicslab.openmathlisp.record.SourceRecordFile;
 import com.scivicslab.openmathlisp.record.EquationRecord;
 import com.scivicslab.openmathlisp.sexp.SExp;
 import com.scivicslab.openmathlisp.sexp.SexpWriter;
-import com.scivicslab.openmathlisp.symbols.Target;
+import com.scivicslab.openmathlisp.symbols.InputFormat;
 import com.scivicslab.openmathlisp.term.Term;
 
 import java.io.IOException;
@@ -23,7 +23,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-/** The six subcommands: convert, check, report, suggest, render, project. */
+/** The six subcommands: convert, check, report, suggest, render, write. */
 public final class Commands {
 
     private final Toolchain toolchain;
@@ -130,31 +130,31 @@ public final class Commands {
     public void render(List<Path> markdownFiles, Path outputDirectory) throws IOException {
         for (Path markdown : markdownFiles) {
             MarkdownDocument document = MarkdownDocument.read(markdown, toolchain.factory());
-            String rendered = document.render(toolchain.projector());
+            String rendered = document.render(toolchain.writer());
             if (outputDirectory == null) {
                 out.print(rendered);
             } else {
                 Files.createDirectories(outputDirectory);
-                Path target = outputDirectory.resolve(markdown.getFileName());
-                Files.writeString(target, rendered, StandardCharsets.UTF_8);
-                out.println(target.toString());
+                Path destination = outputDirectory.resolve(markdown.getFileName());
+                Files.writeString(destination, rendered, StandardCharsets.UTF_8);
+                out.println(destination.toString());
             }
         }
     }
 
     /**
-     * {@code project}: prints every formula of markdown files for one target.
-     * @param target the target
+     * {@code write}: prints every formula of markdown files for one format.
+     * @param format the format
      * @param markdownFiles the markdown files
      * @throws IOException when a file cannot be read
      */
-    public void project(Target target, List<Path> markdownFiles) throws IOException {
+    public void write(InputFormat format, List<Path> markdownFiles) throws IOException {
         for (Path markdown : markdownFiles) {
             MarkdownDocument document = MarkdownDocument.read(markdown, toolchain.factory());
             for (Map.Entry<String, Term> entry : document.equations(DocumentIdentifier.prefixFor(markdown)).entrySet()) {
                 try {
-                    out.println(entry.getKey() + "\t" + toolchain.projector().project(entry.getValue(), target));
-                } catch (ProjectionException e) {
+                    out.println(entry.getKey() + "\t" + toolchain.writer().write(entry.getValue(), format));
+                } catch (TermWriterException e) {
                     out.println(entry.getKey() + "\t(" + e.getMessage() + ")");
                 }
             }

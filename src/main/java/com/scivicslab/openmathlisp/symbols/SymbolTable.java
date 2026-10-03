@@ -81,15 +81,15 @@ public final class SymbolTable {
         Role role = Role.fromName(symbolName(head, fields.get(":role")));
         String arityText = symbolOrIntegerText(head, fields.get(":arity"));
         int arity = arityText.equals("nary") ? SymbolEntry.NARY : Integer.parseInt(arityText);
-        Map<Target, Rule> rules = new LinkedHashMap<>();
-        for (Target target : Target.values()) {
-            SExp value = fields.get(target.keyword());
+        Map<InputFormat, Rule> rules = new LinkedHashMap<>();
+        for (InputFormat format : InputFormat.values()) {
+            SExp value = fields.get(format.keyword());
             if (value instanceof SExp.SSymbol symbol && symbol.isNil()) {
                 continue;
             }
-            rules.put(target, parseRule(head, value));
+            rules.put(format, parseRule(head, value));
         }
-        if (!rules.containsKey(Target.LATEX)) {
+        if (!rules.containsKey(InputFormat.LATEX)) {
             throw new SymbolTableFormatException(head.name() + ": :latex must be a rule, not nil");
         }
         return new SymbolEntry(head.name(), role, arity, rules);

@@ -1,6 +1,6 @@
 package com.scivicslab.openmathlisp.latex;
 
-import com.scivicslab.openmathlisp.project.VariableNames;
+import com.scivicslab.openmathlisp.write.VariableNames;
 import com.scivicslab.openmathlisp.record.Declaration;
 import com.scivicslab.openmathlisp.term.Term;
 
