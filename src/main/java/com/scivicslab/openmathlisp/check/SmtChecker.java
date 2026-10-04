@@ -121,6 +121,9 @@ public final class SmtChecker {
             case Term.BindingTerm binding -> {
                 return false;
             }
+            case Term.AttributionTerm attribution -> {
+                return isPolynomial(attribution.attributed());
+            }
             case Term.ApplicationTerm application -> {
                 if (!(application.head() instanceof Term.SymbolTerm head) || !POLYNOMIAL_SYMBOLS.contains(head.qualifiedName())) {
                     return false;

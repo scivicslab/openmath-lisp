@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CDSignatures xmlns="http://www.openmath.org/OpenMathCDS" type="sts" cd="private_reading1">
+<CDSComment>
+  Date: 2026-10-03
+  Author: Scivics Lab
+  Every symbol of this Content Dictionary is an attribution key: it takes the attribution value and the
+  attributed object, so its signature has two arguments.
+</CDSComment>
+
+<Signature name="vectors">
+<OMOBJ xmlns="http://www.openmath.org/OpenMath">
+<OMA><OMS name="mapsto" cd="sts"/><OMS name="Object" cd="sts"/><OMS name="Object" cd="sts"/><OMS name="Object" cd="sts"/></OMA>
+</OMOBJ>
+</Signature>
+
+<Signature name="euler">
+<OMOBJ xmlns="http://www.openmath.org/OpenMath">
+<OMA><OMS name="mapsto" cd="sts"/><OMS name="Object" cd="sts"/><OMS name="Object" cd="sts"/><OMS name="Object" cd="sts"/></OMA>
+</OMOBJ>
+</Signature>
+
+<Signature name="imaginary">
+<OMOBJ xmlns="http://www.openmath.org/OpenMath">
+<OMA><OMS name="mapsto" cd="sts"/><OMS name="Object" cd="sts"/><OMS name="Object" cd="sts"/><OMS name="Object" cd="sts"/></OMA>
+</OMOBJ>
+</Signature>
+
+<Signature name="time">
+<OMOBJ xmlns="http://www.openmath.org/OpenMath">
+<OMA><OMS name="mapsto" cd="sts"/><OMS name="Object" cd="sts"/><OMS name="Object" cd="sts"/><OMS name="Object" cd="sts"/></OMA>
+</OMOBJ>
+</Signature>
+
+<Signature name="coordinates">
+<OMOBJ xmlns="http://www.openmath.org/OpenMath">
+<OMA><OMS name="mapsto" cd="sts"/><OMS name="Object" cd="sts"/><OMS name="Object" cd="sts"/><OMS name="Object" cd="sts"/></OMA>
+</OMOBJ>
+</Signature>
+
+<Signature name="functions">
+<OMOBJ xmlns="http://www.openmath.org/OpenMath">
+<OMA><OMS name="mapsto" cd="sts"/><OMS name="Object" cd="sts"/><OMS name="Object" cd="sts"/><OMS name="Object" cd="sts"/></OMA>
+</OMOBJ>
+</Signature>
+
+</CDSignatures>

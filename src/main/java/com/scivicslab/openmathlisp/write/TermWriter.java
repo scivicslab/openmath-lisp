@@ -68,6 +68,10 @@ public final class TermWriter {
             case Term.BindingTerm binding -> {
                 return applyRule(binding.binder(), List.of(), binding, format);
             }
+            case Term.AttributionTerm attribution -> {
+                // no format writes a reading key out, so only what it is about is written
+                return writeWithPriority(attribution.attributed(), format);
+            }
         }
     }
 
@@ -199,6 +203,9 @@ public final class TermWriter {
             case Term.BindingTerm binding -> {
                 collectMissing(binding.binder(), format, seen);
                 collectMissing(binding.body(), format, seen);
+            }
+            case Term.AttributionTerm attribution -> {
+                collectMissing(attribution.attributed(), format, seen);
             }
             default -> {
             }

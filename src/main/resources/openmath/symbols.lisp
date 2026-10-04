@@ -596,3 +596,35 @@
   :latex  (:template "\\left[~*\\right]")
   :maxima (:template "[~*]")
   :smt    nil)
+
+;;; private_reading1
+(private_reading1:vectors
+  :role attribution :arity 2
+  :latex  nil
+  :maxima nil
+  :smt    nil)
+(private_reading1:euler
+  :role attribution :arity 2
+  :latex  nil
+  :maxima nil
+  :smt    nil)
+(private_reading1:imaginary
+  :role attribution :arity 2
+  :latex  nil
+  :maxima nil
+  :smt    nil)
+(private_reading1:time
+  :role attribution :arity 2
+  :latex  nil
+  :maxima nil
+  :smt    nil)
+(private_reading1:coordinates
+  :role attribution :arity 2
+  :latex  nil
+  :maxima nil
+  :smt    nil)
+(private_reading1:functions
+  :role attribution :arity 2
+  :latex  nil
+  :maxima nil
+  :smt    nil)

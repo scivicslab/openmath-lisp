@@ -77,6 +77,9 @@ public final class TermFactory {
                 case BINDER -> {
                     return bindingFromList(symbolHead, list);
                 }
+                case ATTRIBUTION -> {
+                    return attributionFromList(symbolHead, list);
+                }
                 case CONSTANT -> throw new TermFormatException("constant cannot be applied: " + symbolHead.qualifiedName());
                 case APPLICATION -> {
                     return new Term.ApplicationTerm(head, argumentsFromList(list));
@@ -95,6 +98,13 @@ public final class TermFactory {
             args.add(fromSExp(list.items().get(i)));
         }
         return args;
+    }
+
+    private Term.AttributionTerm attributionFromList(Term.SymbolTerm key, SExp.SList list) {
+        if (list.items().size() != 3) {
+            throw new TermFormatException("attribution must be (key value attributed): " + key.qualifiedName());
+        }
+        return new Term.AttributionTerm(key, fromSExp(list.items().get(1)), fromSExp(list.items().get(2)));
     }
 
     private Term.BindingTerm bindingFromList(Term.SymbolTerm binder, SExp.SList list) {
@@ -141,6 +151,10 @@ public final class TermFactory {
                     items.add(toSExp(arg));
                 }
                 return new SExp.SList(items);
+            }
+            case Term.AttributionTerm attribution -> {
+                return new SExp.SList(List.of(toSExp(attribution.key()), toSExp(attribution.value()),
+                        toSExp(attribution.attributed())));
             }
             case Term.BindingTerm binding -> {
                 List<SExp> variables = new ArrayList<>();

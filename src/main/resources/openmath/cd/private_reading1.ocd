@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CD xmlns="http://www.openmath.org/OpenMathCD">
+
+<CDComment>
+  This Content Dictionary is derived work in the sense of the OpenMath license: it is not an original
+  OpenMath document, and its name is chosen so that it cannot be confused with any work adopted by the
+  OpenMath Society. The official Content Dictionaries it refers to are distributed from
+  https://github.com/OpenMath/CDs .
+</CDComment>
+
+<CDName>private_reading1</CDName>
+<CDBase>http://www.openmath.org/cd</CDBase>
+<CDReviewDate>2027-10-03</CDReviewDate>
+<CDDate>2026-10-03</CDDate>
+<CDVersion>1</CDVersion>
+<CDRevision>0</CDRevision>
+<CDStatus>private</CDStatus>
+<CDComment>
+  Author: Scivics Lab
+  SourceURL: https://github.com/scivicslab/openmath-lisp
+</CDComment>
+
+<Description>
+  Symbols that record how one formula's LaTeX was read, for the cases a letter means one thing in one
+  formula of a document and another thing elsewhere in the same document. Each symbol is an attribution
+  key: it says nothing about the value of the attributed object, so an application may ignore it.
+</Description>
+
+<CDDefinition>
+<Name>vectors</Name>
+<Role>attribution</Role>
+<Description>
+  The attribution value is a list of variables that the attributed formula's LaTeX wrote as vectors.
+  A dot between two of them was read as a scalar product and a cross as a vector product.
+</Description>
+<Example>
+  The LaTeX (i \cdot I)I + (i \cdot J)J, read in a document where the letter i elsewhere means the
+  imaginary unit, carries vectors with the list i, j, I, J.
+</Example>
+</CDDefinition>
+
+<CDDefinition>
+<Name>euler</Name>
+<Role>attribution</Role>
+<Description>
+  The attribution value is the variable that the attributed formula's LaTeX wrote for the base of the
+  natural logarithm. A power of that letter was read as transc1:exp.
+</Description>
+</CDDefinition>
+
+<CDDefinition>
+<Name>imaginary</Name>
+<Role>attribution</Role>
+<Description>
+  The attribution value is the variable that the attributed formula's LaTeX wrote for the imaginary
+  unit. That letter was read as nums1:i.
+</Description>
+</CDDefinition>
+
+<CDDefinition>
+<Name>time</Name>
+<Role>attribution</Role>
+<Description>
+  The attribution value is the variable that a dot over a quantity differentiates by in the attributed
+  formula's LaTeX.
+</Description>
+</CDDefinition>
+
+<CDDefinition>
+<Name>coordinates</Name>
+<Role>attribution</Role>
+<Description>
+  The attribution value is a list of variables whose dotted form the attributed formula's LaTeX used as
+  an independent variable rather than as a derivative.
+</Description>
+</CDDefinition>
+
+<CDDefinition>
+<Name>functions</Name>
+<Role>attribution</Role>
+<Description>
+  The attribution value is a list of lists, each giving a quantity of the attributed formula followed by
+  the variables it depends on. Each occurrence of that quantity was read as an application to them.
+</Description>
+</CDDefinition>
+
+</CD>

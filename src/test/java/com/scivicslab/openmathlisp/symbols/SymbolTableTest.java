@@ -18,17 +18,19 @@ import org.junit.jupiter.api.Test;
 
 /**
  * The three build-time checks of TermGrammarAndSymbolTable_261002_oo01, decision 6: the table holds exactly the
- * symbols of the 15 dictionaries, every row's role and arity match the .ocd/.sts files, and every row has a
+ * symbols of the 15 official dictionaries and of this project's own private_reading1 (OwnDictionary_261003_oo01),
+ * every row's role and arity match the .ocd/.sts files, and every row whose symbol can appear in a value has a
  * LaTeX rule and either a rule or nil for Maxima and SMT (the loader rejects anything else).
  */
 @Tag("TermGrammarAndSymbolTable_261002_oo01")
 class SymbolTableTest {
 
     private static final List<String> DICTIONARIES = List.of("arith1", "relation1", "transc1", "calculus1", "fns1",
-            "veccalc1", "nums1", "minmax1", "integer1", "complex1", "limit1", "linalg1", "linalg2", "interval1", "list1");
+            "veccalc1", "nums1", "minmax1", "integer1", "complex1", "limit1", "linalg1", "linalg2", "interval1", "list1",
+            "private_reading1");
 
     @Test
-    void loadBundled_symbolsOfFifteenDictionaries_allPresentAndNothingElse() throws IOException {
+    void loadBundled_symbolsOfTheBundledDictionaries_allPresentAndNothingElse() throws IOException {
         SymbolTable table = SymbolTable.loadBundled();
         Map<String, String> expectedRoles = new LinkedHashMap<>();
         for (String cd : DICTIONARIES) {
@@ -38,7 +40,7 @@ class SymbolTableTest {
                 expectedRoles.put(cd + ":" + name, find("<Role>\\s*(\\S+?)\\s*</Role>", m.group(1)));
             }
         }
-        assertEquals(113, expectedRoles.size());
+        assertEquals(119, expectedRoles.size());
         List<String> missing = new ArrayList<>();
         for (String symbol : expectedRoles.keySet()) {
             if (!table.contains(symbol)) {
@@ -52,8 +54,8 @@ class SymbolTableTest {
                 extra.add(entry.qualifiedName());
             }
         }
-        assertTrue(extra.isEmpty(), "not in the 15 dictionaries: " + extra);
-        assertEquals(113, table.size());
+        assertTrue(extra.isEmpty(), "not in the bundled dictionaries: " + extra);
+        assertEquals(119, table.size());
     }
 
     @Test
@@ -84,8 +86,12 @@ class SymbolTableTest {
     }
 
     @Test
-    void loadBundled_everyRow_hasLatexRule() {
+    void loadBundled_everyRowButAnAttributionKey_hasLatexRule() {
         for (SymbolEntry entry : SymbolTable.loadBundled().entries()) {
+            if (entry.role() == Role.ATTRIBUTION) {
+                assertTrue(entry.rule(InputFormat.LATEX).isEmpty(), entry.qualifiedName());
+                continue;
+            }
             assertTrue(entry.rule(InputFormat.LATEX).isPresent(), entry.qualifiedName());
         }
     }

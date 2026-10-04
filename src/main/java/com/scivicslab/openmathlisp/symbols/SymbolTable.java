@@ -89,7 +89,10 @@ public final class SymbolTable {
             }
             rules.put(format, parseRule(head, value));
         }
-        if (!rules.containsKey(InputFormat.LATEX)) {
+        if (role != Role.ATTRIBUTION && !rules.containsKey(InputFormat.LATEX)) {
+            // a converted document is displayed by writing its terms back as LaTeX, so every symbol a
+            // value is built from needs a LaTeX rule; an attribution key is not part of the value and
+            // no format writes it out
             throw new SymbolTableFormatException(head.name() + ": :latex must be a rule, not nil");
         }
         return new SymbolEntry(head.name(), role, arity, rules);

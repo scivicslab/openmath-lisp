@@ -87,12 +87,31 @@ its om block in the markdown and run `check` again.
 
 ## Symbol table
 
-`src/main/resources/openmath/symbols.lisp` holds the 113 symbols of 15 OpenMath dictionaries
-(arith1, relation1, transc1, calculus1, fns1, veccalc1, nums1, minmax1, integer1, complex1,
-limit1, linalg1, linalg2, interval1, list1). Role and arity come from the official `.ocd` and
-`.sts` files; the three writing rules per symbol are written in
-`bin/generate-symbol-table.py`, which regenerates the file. The unit tests verify the table
-against the dictionary files.
+`src/main/resources/openmath/symbols.lisp` holds 119 symbols: the 113 of 15 official OpenMath
+dictionaries (arith1, relation1, transc1, calculus1, fns1, veccalc1, nums1, minmax1, integer1,
+complex1, limit1, linalg1, linalg2, interval1, list1) and the 6 of this project's own
+`private_reading1`. Role and arity come from the `.ocd` and `.sts` files — the official ones are
+verbatim copies kept with the tests, `private_reading1` is a resource of the library — and the three
+writing rules per symbol are written in `bin/generate-symbol-table.py`, which regenerates the file.
+The unit tests verify the table against the dictionary files.
+
+### private_reading1
+
+A letter can mean one thing in one formula of a document and another thing elsewhere in it: `e` is
+the base of the natural logarithm in one equation and an ordinary variable in the next. The six
+symbols of `private_reading1` record, for one formula, which reading its LaTeX was given: `vectors`,
+`euler`, `imaginary`, `time`, `coordinates` and `functions`. Each is an attribution key in the sense
+of the OpenMath standard, so a formula carries it as `(key value formula)`:
+
+```lisp
+(private_reading1:euler e
+  (relation1:eq psi (transc1:exp (arith1:times nums1:i omega t))))
+```
+
+The standard says an attribution whose symbol has role `attribution` may be ignored, which is what
+every reader of the term does here: `Term.withoutAttributions` gives the formula back, and the writer
+writes only the formula, so the LaTeX above is `\psi = e^{i \omega t}`. The key is not part of the
+value, so it is the one kind of row in the symbol table with no LaTeX rule.
 
 ## Design documents
 

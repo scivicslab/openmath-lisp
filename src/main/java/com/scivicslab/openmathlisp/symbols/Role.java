@@ -6,6 +6,8 @@ public enum Role {
     APPLICATION,
     /** Heads a binding {@code (symbol (vars...) body)}. */
     BINDER,
+    /** Heads an attribution {@code (symbol value attributed)}. */
+    ATTRIBUTION,
     /** Stands alone. */
     CONSTANT;
 
@@ -18,6 +20,7 @@ public enum Role {
         return switch (name) {
             case "application" -> APPLICATION;
             case "binder" -> BINDER;
+            case "attribution" -> ATTRIBUTION;
             case "constant" -> CONSTANT;
             default -> throw new IllegalArgumentException("unknown role: " + name);
         };
